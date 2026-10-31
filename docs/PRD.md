@@ -522,6 +522,8 @@ Driver: `psycopg` 3. Migrations: one idempotent `schema.sql` run at startup (no 
 | **Sanchi** | **Frontend: structure & analysis pages** | `frontend/` shell, design system, Architecture, Report, Before/After, History | FR-W1, W2, W5, W6, W8 |
 | **Harshit** | **Frontend: live & AI pages** | Live experiment, Capacity, Agent chat panel, SSE hooks | FR-W3, W4, W7 |
 
+Full per-person checklist: [TASKS.md](TASKS.md).
+
 ### 13.2 Connection points (handoffs)
 
 | # | From → To | What is handed over | By hour |

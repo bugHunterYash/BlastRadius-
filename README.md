@@ -39,6 +39,7 @@ Details: [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md).
 | Doc | What it is |
 |---|---|
 | [docs/PRD.md](docs/PRD.md) | **Source of truth.** Problem, features, agent spec, API contract, data model, team split, timeline, tests, demo script |
+| [docs/TASKS.md](docs/TASKS.md) | **Per-member task checklist** with hours, done-checks, and handoffs |
 | [docs/PHASE_PLAN.md](docs/PHASE_PLAN.md) | Build phases, bug list, premium CLI design spec |
 | [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md) | Audit of what's done, % complete, tests to run after each phase |
 | [docs/plan.md](docs/plan.md) · [docs/implementation.md](docs/implementation.md) | Original design notes |
@@ -79,6 +80,8 @@ for f in tests/test_*.py; do .venv/bin/python "$f" || echo "FAILED: $f"; done
 | Ayush | Backend engine, PostgreSQL store, Gemini agent |
 | Sanchi | Frontend: shell, design system, architecture, report, before/after |
 | Harshit | Frontend: live experiment, capacity, agent chat |
+
+Task breakdown: [docs/TASKS.md](docs/TASKS.md).
 
 ## Safety
 
