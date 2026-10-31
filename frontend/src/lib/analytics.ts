@@ -44,8 +44,10 @@ const sec = (ts: string) => {
 }
 
 export function buildReport(project: Project, events: MemoryEvent[], issues: Issue[], calls: MekoCall[], prior: PriorVersion[]): SessionReport {
-  const start = events[0]
-  const end = events.at(-1)!
+  // a run with no memory events yet (e.g. only agent questions) still gets a report, with zeros
+  const now = { ts: new Date().toISOString() }
+  const start = events[0] ?? now
+  const end = events.at(-1) ?? start
   const t0 = sec(start.ts)
   const writes = events.filter((e) => e.op === "write")
   const reads = events.filter((e) => e.op === "read")
@@ -65,7 +67,7 @@ export function buildReport(project: Project, events: MemoryEvent[], issues: Iss
   const dismissed = issues.filter((i) => i.status === "rejected").length
 
   const clean = events.filter((e) => !offending.has(e.event_id)).length
-  const health = Math.max(0, Math.round((clean / events.length) * 100 - openIssues.length * 8))
+  const health = events.length ? Math.max(0, Math.round((clean / events.length) * 100 - openIssues.length * 8)) : 100
 
   const phases = project.phases.map((p) => {
     const mine = events.filter((e) => e.agent === p.agent)
@@ -105,7 +107,7 @@ export function buildReport(project: Project, events: MemoryEvent[], issues: Iss
   const superseded = writes.filter((w) => writes.some((n) => n.fact_key === w.fact_key && n.version! > w.version!))
   const shippedWithIssue = superseded.some((w) => !!lastOutput && traceFrom(events, w.event_id)?.hops.has(lastOutput))
 
-  const durationSec = sec(end.ts) - t0
+  const durationSec = Math.max(0, sec(end.ts) - t0)
   const mins = Math.floor(durationSec / 60)
   const verdict: SessionReport["verdict"] = openIssues.length === 0 && !shippedWithIssue ? "clean" : shippedWithIssue ? "shipped-with-issues" : "blocked"
   const headline =
@@ -123,7 +125,7 @@ export function buildReport(project: Project, events: MemoryEvent[], issues: Iss
   })
   for (const e of events) {
     const row = activity[Math.floor((sec(e.ts) - t0) / BIN)]
-    row[e.agent] = (row[e.agent] as number) + 1
+    if (row && e.agent in row) row[e.agent] = (row[e.agent] as number) + 1
   }
 
   let cleanSoFar = 0
@@ -148,7 +150,8 @@ export function buildReport(project: Project, events: MemoryEvent[], issues: Iss
     durationSec,
     startTs: start.ts,
     endTs: end.ts,
-    totals: { calls: calls.length, writes: writes.length, reads: reads.length, handoffs: handoffs.length, facts: facts.length, versions: writes.length },
+    // memory calls only: runtime steps (tool calls, commands) are in the chat too, but aren't Meko calls
+    totals: { calls: calls.filter((c) => !c.exec).length, writes: writes.length, reads: reads.length, handoffs: handoffs.length, facts: facts.length, versions: writes.length },
     staleRate: reads.length ? staleReads.length / reads.length : 0,
     staleReads,
     issues: { found: issues.length, fixed, dismissed, open: openIssues.length },

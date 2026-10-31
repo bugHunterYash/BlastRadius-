@@ -5,29 +5,42 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { isOpen, latestVersion } from "@/lib/graph"
 import { cap, clock, FIX_LABEL, ISSUE_LABEL } from "@/lib/format"
-import { AGENT_ROLES, DESIGN, EVENTS, PRIOR, RUNS } from "@/lib/sample-data"
-import type { Issue } from "@/lib/types"
+import { AGENT_ROLES, DESIGN, EVENTS, HEADLINE_TRACE, PRIOR, PROVIDERS, RUNS } from "@/lib/data"
+import type { Issue, MemoryEvent } from "@/lib/types"
 import { seenIssues, useTower } from "./tower-store"
 import { Figures, IssueCard, Kicker, Meta, Note, Para, Row, Rows, Section, StatusPill, Timeline, Title } from "./ui-bits"
 
-const byId = (id: string) => EVENTS.find((e) => e.event_id === id)!
-const ordered = (ids: string[]) => ids.map(byId).sort((a, b) => EVENTS.indexOf(a) - EVENTS.indexOf(b))
+const byId = (id: string) => EVENTS.find((e) => e.event_id === id)
+const ordered = (ids: string[]) =>
+  ids.map(byId).filter((e): e is MemoryEvent => !!e).sort((a, b) => EVENTS.indexOf(a) - EVENTS.indexOf(b))
 const offending = (i: Issue) => i.evidence.at(-1)!
 
+/** The few events that tell the run's story: everything behind its issues, or its first writes when clean. */
+function storyEvents(issues: Issue[]) {
+  const ids = [...new Set(issues.flatMap((i) => i.evidence))]
+  const evs = ordered(ids)
+  return (evs.length ? evs : EVENTS.filter((e) => e.op === "write")).slice(0, 6)
+}
+
 export function RunView({ id }: { id: string }) {
-  const { state, go, trace, setMode } = useTower()
-  const run = RUNS.find((r) => r.run_id === id)!
+  const { state, go, trace, setMode, openRun } = useTower()
+  const run = RUNS.find((r) => r.run_id === id)
   const open = seenIssues(state).filter(isOpen)
 
-  if (id !== "run-42") {
+  if (!run) return <Note>Loading the run…</Note>
+  if (id !== state.runId) {
     return (
       <>
         <header>
-          <Kicker>Today, {clock(run.started_at)}</Kicker>
+          <Kicker>{clock(run.started_at)} · {run.datapack}</Kicker>
           <Title>{run.headline}</Title>
           <Para>{run.summary}</Para>
         </header>
-        <Note>The graph shows run-42 in this preview.</Note>
+        <div>
+          <Button size="lg" className="h-10 rounded-[10px] px-4" onClick={() => openRun(id)}>
+            Open this run
+          </Button>
+        </div>
       </>
     )
   }
@@ -35,7 +48,7 @@ export function RunView({ id }: { id: string }) {
   return (
     <>
       <header>
-        <Kicker>Today, {clock(run.started_at)} · {run.datapack}</Kicker>
+        <Kicker>{clock(run.started_at)} · {run.datapack}</Kicker>
         <Title>{run.headline}</Title>
         <Para>{run.summary}</Para>
       </header>
@@ -58,12 +71,14 @@ export function RunView({ id }: { id: string }) {
         )}
       </Section>
       <Section title="What happened">
-        <Timeline events={["ev05", "ev06", "ev12", "ev15"].map(byId)} flagged={state.issues.map(offending)} />
+        {EVENTS.length ? <Timeline events={storyEvents(state.issues)} flagged={state.issues.map(offending)} /> : <Note>No memory events yet.</Note>}
       </Section>
       <div className="flex flex-wrap gap-2">
-        <Button size="lg" className="h-10 rounded-[10px] px-4" onClick={() => trace("ev02")}>
-          Trace where ₹499 went
-        </Button>
+        {HEADLINE_TRACE && (
+          <Button size="lg" className="h-10 rounded-[10px] px-4" onClick={() => trace(HEADLINE_TRACE!.eventId)}>
+            Trace where {HEADLINE_TRACE.label.length > 24 ? `${HEADLINE_TRACE.label.slice(0, 24)}…` : HEADLINE_TRACE.label} went
+          </Button>
+        )}
         <Button size="lg" variant="outline" className="h-10 rounded-[10px] px-4" onClick={() => setMode("replay")}>
           Replay the run
         </Button>
@@ -79,7 +94,7 @@ export function IssuesView() {
   return (
     <>
       <header>
-        <Kicker>run-42</Kicker>
+        <Kicker>{state.runId}</Kicker>
         <Title>Issues</Title>
         <Para>Rule checks read every memory event of the run. Claude drafts one fix for each issue, and nothing changes until you approve it.</Para>
       </header>
@@ -121,7 +136,7 @@ export function RunsView() {
           <Row
             key={r.run_id}
             onClick={() => go("run", r.run_id)}
-            trail={r.run_id === "run-42" ? <Meta flag={open > 0}>{open ? `${open} to review` : "Clear"}</Meta> : <Meta>{clock(r.started_at)}</Meta>}
+            trail={r.run_id === state.runId ? <Meta flag={open > 0}>{open ? `${open} to review` : "Clear"}</Meta> : <Meta>{clock(r.started_at)}</Meta>}
           >
             {r.run_id}
           </Row>
@@ -133,7 +148,7 @@ export function RunsView() {
 
 export function AgentView({ id }: { id: string }) {
   const { state, go } = useTower()
-  const perms = DESIGN.permissions[id]
+  const perms = DESIGN.permissions[id] ?? { read: [], write: [] }
   const mine = EVENTS.filter((e) => e.agent === id && (e.op === "read" || e.op === "write"))
   const open = seenIssues(state).filter((i) => isOpen(i) && i.agent === id)
   const flagged = new Set(open.map(offending))
@@ -143,7 +158,7 @@ export function AgentView({ id }: { id: string }) {
         <Kicker>Agent</Kicker>
         <Title>{cap(id)}</Title>
         <Para>
-          {AGENT_ROLES[id]} In run-42 it made {mine.length} memory {mine.length === 1 ? "call" : "calls"}
+          {AGENT_ROLES[id]} In {state.runId} it made {mine.length} memory {mine.length === 1 ? "call" : "calls"}
           {open.length > 0 && (
             <>
               , and <b className="font-semibold text-foreground">{open.length} {open.length === 1 ? "needs" : "need"} your review</b>
@@ -154,9 +169,15 @@ export function AgentView({ id }: { id: string }) {
       </header>
       <dl className="grid grid-cols-[90px_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-[15px]">
         <dt className="text-muted-foreground">Can read</dt>
-        <dd>{perms.read.join(", ")}</dd>
+        <dd>{perms.read.join(", ") || "nothing"}</dd>
         <dt className="text-muted-foreground">Can write</dt>
-        <dd>{perms.write.join(", ")}</dd>
+        <dd>{perms.write.join(", ") || "nothing"}</dd>
+        {PROVIDERS[id] && (
+          <>
+            <dt className="text-muted-foreground">Runs on</dt>
+            <dd>{cap(PROVIDERS[id])}</dd>
+          </>
+        )}
       </dl>
       {open.length > 0 && (
         <Section title="Needs your review">
@@ -190,7 +211,18 @@ export function FactView({ id }: { id: string }) {
   const writes = EVENTS.filter((e) => e.op === "write" && e.fact_key === id)
   const prior = PRIOR.find((p) => p.fact_key === id)
   const reads = EVENTS.filter((e) => e.op === "read" && e.fact_key === id)
-  const current = latestVersion(id, EVENTS, PRIOR)!
+  const current = latestVersion(id, EVENTS, PRIOR)
+  if (!current) {
+    return (
+      <>
+        <header>
+          <Kicker>Fact · {id}</Kicker>
+          <Title>{id}</Title>
+          <Para>Read in this run, but written before it started.</Para>
+        </header>
+      </>
+    )
+  }
   return (
     <>
       <header>
@@ -249,7 +281,8 @@ export function FactView({ id }: { id: string }) {
 
 export function IssueView({ id }: { id: string }) {
   const { state, go, decide } = useTower()
-  const issue = state.issues.find((i) => i.issue_id === id)!
+  const issue = state.issues.find((i) => i.issue_id === id)
+  if (!issue) return <Note>This issue belongs to another run.</Note>
   const fix = issue.fix
   return (
     <>

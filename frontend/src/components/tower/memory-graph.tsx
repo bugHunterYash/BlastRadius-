@@ -24,9 +24,10 @@ import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 import { buildLinks, isOpen, latestVersion, linkKey, type LinkOp } from "@/lib/graph"
 import { agentColor, cap, ISSUE_TAG } from "@/lib/format"
-import { EVENTS, LAYOUT, PRIOR, DESIGN } from "@/lib/sample-data"
+import { AGENT_META, EVENTS, LAYOUT, PRIOR, DESIGN } from "@/lib/data"
 import { Icon } from "@/components/ui/icon"
 import { AGENT_ICON } from "./agent-glyph"
+import { RuntimeMark, runtimeLine } from "./runtime-logo"
 import { seenIssues, useTower } from "./tower-store"
 
 const STAGE = { w: 1000, h: 620 }
@@ -141,12 +142,19 @@ function AgentNode({ id, data }: NodeProps<TowerNode>) {
         style={{ background: color, boxShadow: `0 8px 20px -8px ${color}` }}
       >
         <Icon name={AGENT_ICON[id] ?? "smart_toy"} size={26} />
+        {/* which runtime runs this agent: Claude Code or Codex */}
+        {AGENT_META[id]?.provider && (
+          <span className="absolute -right-1.5 -bottom-1.5 grid size-[22px] place-items-center rounded-full bg-white p-[3px] shadow">
+            <RuntimeMark provider={AGENT_META[id]?.provider} className="size-full" />
+          </span>
+        )}
       </span>
       <div
-        className={cn("pointer-events-none absolute top-[calc(50%+38px)] left-1/2 -translate-x-1/2 text-[15px] font-bold whitespace-nowrap text-foreground", data.flagged && "text-[var(--ripple)]")}
+        className={cn("pointer-events-none absolute top-[calc(50%+38px)] left-1/2 -translate-x-1/2 text-center text-[15px] font-bold whitespace-nowrap text-foreground", data.flagged && "text-[var(--ripple)]")}
         style={halo}
       >
         {data.label}
+        {runtimeLine(id) && <span className="block text-[10.5px] font-normal text-muted-foreground">{runtimeLine(id)}</span>}
       </div>
       {data.hop !== null && <HopMark key={`h${data.traceKey}`} hop={data.hop} offset={30} />}
     </div>
@@ -320,30 +328,43 @@ function place(id: string, portrait: boolean) {
   return { x: x - size / 2, y: y - size / 2 }
 }
 
-const initialNodes: TowerNode[] = Object.entries(LAYOUT).map(([id, p], i) => {
-  const kind = DESIGN.agents.includes(id) ? "agent" : "fact"
-  return {
-    id,
-    type: kind,
-    position: place(id, false),
-    data: { kind, label: kind === "agent" ? cap(id) : id, version: null, side: p.x > 0.9 ? "left" : "right", dim: false, selected: false, flagged: false, hop: null, traceKey: 0, active: null, drift: i * 1.3 },
-  }
-})
+/** One node per agent and fact of the loaded run (LAYOUT changes when a live run loads). */
+const buildNodes = (portrait = false): TowerNode[] =>
+  Object.entries(LAYOUT).map(([id, p], i) => {
+    const kind = DESIGN.agents.includes(id) ? "agent" : "fact"
+    const edge = portrait ? p.y : p.x
+    return {
+      id,
+      type: kind,
+      position: place(id, portrait),
+      data: { kind, label: kind === "agent" ? cap(id) : id, version: null, side: edge > 0.9 ? "left" : "right", dim: false, selected: false, flagged: false, hop: null, traceKey: 0, active: null, drift: i * 1.3 },
+    }
+  })
 
 export function MemoryGraph({ showReads = true, showHandoffs = true, showLabels = true }: { showReads?: boolean; showHandoffs?: boolean; showLabels?: boolean }) {
   const { state, go } = useTower()
   const { view, mode, replayN, trace, traceKey, issues, highlight } = state
-  const [nodes, setNodes, onNodesChange] = useNodesState<TowerNode>(initialNodes)
+  const [nodes, setNodes, onNodesChange] = useNodesState<TowerNode>(buildNodes())
   const { fitView } = useReactFlow()
   const wrap = useRef<HTMLDivElement>(null)
   const [portrait, setPortrait] = useState(false)
   const measured = useNodesInitialized()
 
+  // a different run (or the first live load) brings its own agents and facts
+  useEffect(() => {
+    if (!state.loaded) return
+    setNodes(buildNodes(portrait))
+    const raf = requestAnimationFrame(() => fitView({ padding: 0.12 }))
+    return () => cancelAnimationFrame(raf)
+    // portrait is handled by the effect below; only a data load rebuilds the node set
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.loaded, state.runId, setNodes, fitView])
+
   // re-lay the network when the panel switches between tall and wide
   useEffect(() => {
     if (!measured) return
     setNodes((ns) =>
-      ns.map((n) => {
+      ns.filter((n) => LAYOUT[n.id]).map((n) => {
         const p = LAYOUT[n.id]
         const edge = portrait ? p.y : p.x
         return { ...n, position: place(n.id, portrait), data: { ...n.data, side: edge > 0.85 ? "left" : "right" } }
@@ -353,7 +374,9 @@ export function MemoryGraph({ showReads = true, showHandoffs = true, showLabels 
     return () => cancelAnimationFrame(raf)
   }, [portrait, measured, setNodes, fitView])
 
-  const links = useMemo(() => buildLinks(EVENTS, issues, replayN), [issues, replayN])
+  // state.loaded: EVENTS is replaced when a run loads, so recompute even if the counts match
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const links = useMemo(() => buildLinks(EVENTS, issues, replayN).filter((l) => LAYOUT[l.source] && LAYOUT[l.target]), [issues, replayN, state.loaded])
   const seen = useMemo(() => seenIssues(state), [state])
   // the newest Meko call; its link pulses and the nodes at both ends ripple
   const newest = replayN > 0 && !trace ? EVENTS[replayN - 1] : null
@@ -460,7 +483,7 @@ export function MemoryGraph({ showReads = true, showHandoffs = true, showLabels 
         elementsSelectable={false}
         minZoom={0.4}
         maxZoom={2}
-        aria-label="Memory graph of run-42: four agents and the facts they read and write"
+        aria-label={`Memory graph of ${state.runId}: ${DESIGN.agents.length} agents and the facts they read and write`}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1.3} color="var(--dots)" />
         <Controls position="bottom-right" showInteractive={false} />

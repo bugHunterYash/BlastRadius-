@@ -1,5 +1,6 @@
 "use client"
 
+import { AgentAccess } from "./agent-access"
 import { CommandMenu } from "./command-menu"
 import { Workspace } from "./graph-panel"
 import { DetailsDrawer } from "./panel"
@@ -21,6 +22,7 @@ export function ControlTower() {
       <DetailsDrawer />
       <CommandMenu />
       <SessionReportView />
+      <AgentAccess />
     </TowerProvider>
   )
 }

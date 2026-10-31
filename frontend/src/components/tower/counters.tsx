@@ -5,13 +5,15 @@ import type { CallKind } from "@/lib/types"
 import { useVisibleCalls } from "./shared-chat"
 
 // each kind of Meko call has its own colour, matching the verbs in the chat
-const TINT: Record<CallKind, string> = {
+const TINT: Partial<Record<CallKind, string>> = {
   note: "var(--primary)",
   recall: "var(--agent-researcher)",
   promotion: "var(--agent-writer)",
   directive: "var(--agent-reviewer)",
   approval: "var(--agent-publisher)",
   error: "var(--destructive)",
+  tool: "var(--ink-2)",
+  command: "var(--ink-2)",
 }
 
 const ORDER: { kind: CallKind; label: string }[] = [
@@ -20,6 +22,8 @@ const ORDER: { kind: CallKind; label: string }[] = [
   { kind: "promotion", label: "promotions" },
   { kind: "directive", label: "directives" },
   { kind: "approval", label: "approvals" },
+  { kind: "tool", label: "tool calls" },
+  { kind: "command", label: "commands" },
   { kind: "error", label: "errors" },
 ]
 

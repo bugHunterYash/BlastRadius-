@@ -3,7 +3,7 @@
 import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 import { agentColor, cap, clock, describe } from "@/lib/format"
-import { DESIGN, EVENTS } from "@/lib/sample-data"
+import { DESIGN, EVENTS } from "@/lib/data"
 import { useTower } from "./tower-store"
 
 const HEIGHT: Record<string, number> = { write: 1, read: 0.6, handoff: 0.38 }

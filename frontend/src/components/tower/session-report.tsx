@@ -9,7 +9,9 @@ import { cn } from "@/lib/utils"
 import { buildReport, type SessionReport } from "@/lib/analytics"
 import { isOpen } from "@/lib/graph"
 import { agentColor, cap, clock, FIX_LABEL, ISSUE_LABEL } from "@/lib/format"
-import { EVENTS, PRIOR, PROJECT, PROJECT_TEMPLATES, RUNS } from "@/lib/sample-data"
+// the run on screen comes from the live data module; the project brief is still the sample's
+import { EVENTS, PRIOR, RUNS } from "@/lib/data"
+import { PROJECT, PROJECT_TEMPLATES } from "@/lib/sample-data"
 import { AgentGlyph } from "./agent-glyph"
 import { ActivityChart, FreshnessChart, HealthChart, PhaseTimeChart, Sparkline } from "./report-charts"
 import { useTower } from "./tower-store"
@@ -50,7 +52,9 @@ export function SessionReportView() {
 
 function Report() {
   const { state, setReportOpen } = useTower()
-  const report = useMemo(() => buildReport(PROJECT, EVENTS, state.issues, state.calls, PRIOR), [state.issues, state.calls])
+  // state.loaded: EVENTS is a live binding replaced when a run loads, so it must trigger a rebuild
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const report = useMemo(() => buildReport(PROJECT, EVENTS, state.issues, state.calls, PRIOR), [state.issues, state.calls, state.loaded])
   const template = PROJECT_TEMPLATES[PROJECT.kind]
   const verdict = VERDICT[report.verdict]
 
@@ -75,7 +79,7 @@ function Report() {
         <div className="mx-auto flex h-16 max-w-[1180px] items-center gap-3 px-5 sm:px-8">
           <Icon name="insights" size={24} className="text-primary" />
           <span className="text-[17px] font-bold">Session report</span>
-          <span className="hidden text-[15px] font-semibold text-muted-foreground sm:inline">· {RUNS[0].run_id}</span>
+          <span className="hidden text-[15px] font-semibold text-muted-foreground sm:inline">· {(RUNS.find((r) => r.run_id === state.runId) ?? RUNS[0]).run_id}</span>
           <div className="ml-auto flex gap-2">
             <Button variant="outline" className="h-10 gap-2 rounded-xl px-4 text-[15px] font-bold" onClick={copySummary}>
               <Icon name="content_copy" size={18} />
@@ -107,7 +111,7 @@ function Report() {
           <p className="mt-5 max-w-[70ch] text-[18px] leading-[1.6] font-semibold text-foreground">{report.headline}</p>
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-[15px] font-semibold text-ink-2">
             <span className="flex items-center gap-2"><Icon name="schedule" size={20} className="text-muted-foreground" />{clock(report.startTs)} to {clock(report.endTs)} · {fmtDuration(report.durationSec)}</span>
-            <span className="flex items-center gap-2"><Icon name="database" size={20} className="text-muted-foreground" />{RUNS[0].datapack}</span>
+            <span className="flex items-center gap-2"><Icon name="database" size={20} className="text-muted-foreground" />{(RUNS.find((r) => r.run_id === state.runId) ?? RUNS[0]).datapack}</span>
             <span className="flex items-center gap-1.5">
               {report.agents.map((a) => <AgentGlyph key={a.agent} agent={a.agent} size={26} />)}
               <span className="ml-1">{report.agents.length} agents</span>
