@@ -7,7 +7,7 @@ import { isOpen, latestVersion } from "@/lib/graph"
 import { cap, clock, FIX_LABEL, ISSUE_LABEL } from "@/lib/format"
 import { AGENT_ROLES, DESIGN, EVENTS, PRIOR, RUNS } from "@/lib/sample-data"
 import type { Issue } from "@/lib/types"
-import { useTower } from "./tower-store"
+import { seenIssues, useTower } from "./tower-store"
 import { Figures, IssueCard, Kicker, Meta, Note, Para, Row, Rows, Section, StatusPill, Timeline, Title } from "./ui-bits"
 
 const byId = (id: string) => EVENTS.find((e) => e.event_id === id)!
@@ -17,7 +17,7 @@ const offending = (i: Issue) => i.evidence.at(-1)!
 export function RunView({ id }: { id: string }) {
   const { state, go, trace, setMode } = useTower()
   const run = RUNS.find((r) => r.run_id === id)!
-  const open = state.issues.filter(isOpen)
+  const open = seenIssues(state).filter(isOpen)
 
   if (id !== "run-42") {
     return (
@@ -74,8 +74,8 @@ export function RunView({ id }: { id: string }) {
 
 export function IssuesView() {
   const { state, go } = useTower()
-  const open = state.issues.filter(isOpen)
-  const decided = state.issues.filter((i) => !isOpen(i))
+  const open = seenIssues(state).filter(isOpen)
+  const decided = seenIssues(state).filter((i) => !isOpen(i))
   return (
     <>
       <header>
@@ -109,7 +109,7 @@ export function IssuesView() {
 
 export function RunsView() {
   const { state, go } = useTower()
-  const open = state.issues.filter(isOpen).length
+  const open = seenIssues(state).filter(isOpen).length
   return (
     <>
       <header>
@@ -135,7 +135,7 @@ export function AgentView({ id }: { id: string }) {
   const { state, go } = useTower()
   const perms = DESIGN.permissions[id]
   const mine = EVENTS.filter((e) => e.agent === id && (e.op === "read" || e.op === "write"))
-  const open = state.issues.filter((i) => isOpen(i) && i.agent === id)
+  const open = seenIssues(state).filter((i) => isOpen(i) && i.agent === id)
   const flagged = new Set(open.map(offending))
   return (
     <>

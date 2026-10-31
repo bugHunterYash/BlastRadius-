@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils"
 import { isOpen, latestVersion } from "@/lib/graph"
 import { cap } from "@/lib/format"
 import { DESIGN, EVENTS, LAYOUT, PRIOR, RUNS } from "@/lib/sample-data"
-import { useTower, type ViewKind } from "./tower-store"
+import { seenIssues, useTower, type ViewKind } from "./tower-store"
 
 const FACTS = Object.keys(LAYOUT).filter((id) => !DESIGN.agents.includes(id))
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { state, go } = useTower()
   const { resolvedTheme, setTheme } = useTheme()
-  const open = state.issues.filter(isOpen)
+  const open = seenIssues(state).filter(isOpen)
   const nav = (kind: ViewKind, id: string) => {
     go(kind, id)
     onNavigate?.()
@@ -114,7 +114,7 @@ function Item({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 
 export function Sidebar() {
   return (
-    <aside className="hidden min-h-0 border-r bg-sidebar lg:block">
+    <aside className="hidden min-h-0 border-r bg-sidebar xl:block">
       <SidebarContent />
     </aside>
   )

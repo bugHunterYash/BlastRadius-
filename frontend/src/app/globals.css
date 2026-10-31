@@ -99,45 +99,46 @@
   --sidebar-ring: #2443dc;
 }
 
+/* dark mode: cool blue graphite, so cobalt stays the one accent and nothing reads as warm charcoal */
 .dark {
-  --background: #0c0d10;
-  --foreground: #ededef;
-  --ink-2: #a7a9b1;
-  --card: #131418;
-  --card-foreground: #ededef;
-  --popover: #16171b;
-  --popover-foreground: #ededef;
-  --primary: #7b91ff;
-  --primary-foreground: #0c0d10;
-  --secondary: #1b1c21;
-  --secondary-foreground: #ededef;
-  --muted: #1b1c21;
-  --muted-foreground: #6e717a;
-  --accent: #1b1c21;
-  --accent-foreground: #ededef;
-  --destructive: #f07a4f;
-  --border: #22242a;
-  --input: #2a2c33;
-  --ring: #7b91ff;
-  --cobalt: #7b91ff;
-  --cobalt-soft: #1a2045;
-  --flag: #f07a4f;
-  --flag-soft: #2e1a12;
-  --mint: #46d39b;
-  --dots: #24262c;
-  --chart-1: #7b91ff;
-  --chart-2: #f07a4f;
-  --chart-3: #6e717a;
-  --chart-4: #a7a9b1;
-  --chart-5: #ededef;
-  --sidebar: #0c0d10;
-  --sidebar-foreground: #ededef;
-  --sidebar-primary: #7b91ff;
-  --sidebar-primary-foreground: #0c0d10;
-  --sidebar-accent: #17181d;
-  --sidebar-accent-foreground: #ededef;
-  --sidebar-border: #22242a;
-  --sidebar-ring: #7b91ff;
+  --background: #0f1218;
+  --foreground: #e8ebf2;
+  --ink-2: #a6adbd;
+  --card: #151922;
+  --card-foreground: #e8ebf2;
+  --popover: #1a1f2a;
+  --popover-foreground: #e8ebf2;
+  --primary: #6f86ff;
+  --primary-foreground: #ffffff;
+  --secondary: #1c2230;
+  --secondary-foreground: #e8ebf2;
+  --muted: #1b202b;
+  --muted-foreground: #6f7789;
+  --accent: #1c2230;
+  --accent-foreground: #e8ebf2;
+  --destructive: #f0795a;
+  --border: #232937;
+  --input: #2a3141;
+  --ring: #6f86ff;
+  --cobalt: #6f86ff;
+  --cobalt-soft: #1b2340;
+  --flag: #f0795a;
+  --flag-soft: #2d1d18;
+  --mint: #4fd1a0;
+  --dots: #222838;
+  --chart-1: #6f86ff;
+  --chart-2: #f0795a;
+  --chart-3: #6f7789;
+  --chart-4: #a6adbd;
+  --chart-5: #e8ebf2;
+  --sidebar: #0c0f14;
+  --sidebar-foreground: #e8ebf2;
+  --sidebar-primary: #6f86ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #161b25;
+  --sidebar-accent-foreground: #e8ebf2;
+  --sidebar-border: #1d2330;
+  --sidebar-ring: #6f86ff;
 }
 
 @layer base {
@@ -161,8 +162,21 @@
   0% { transform: scale(1); opacity: 0.7; }
   100% { transform: scale(1.65); opacity: 0; }
 }
+/* the warm glow around an agent with an open issue */
+@keyframes glow {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* nodes bob gently so the network never looks frozen */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(1.5px, -3px); }
+  66% { transform: translate(-1.5px, 2px); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .motion-safe-pulse { animation: none !important; }
+  .motion-safe-pulse,
+  .tower .react-flow__node > div { animation: none !important; }
 }
 
 /* React Flow, quieted to match the rest of the app */

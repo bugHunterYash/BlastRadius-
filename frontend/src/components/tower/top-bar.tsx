@@ -22,7 +22,7 @@ export function TopBar() {
     <header className="flex h-[52px] items-center gap-3 border-b px-3 sm:px-5">
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation">
+          <Button variant="ghost" size="icon" className="xl:hidden" aria-label="Open navigation">
             <Menu className="size-4" />
           </Button>
         </SheetTrigger>

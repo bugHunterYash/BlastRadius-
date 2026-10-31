@@ -13,7 +13,10 @@ export interface View {
   id: string
 }
 export type Mode = "graph" | "replay" | "trace"
+/** "details" slides the details drawer over the chat */
 export type PanelTab = "chat" | "details"
+/** the graph sits beside the chat, folds to a strip, or takes the whole workspace */
+export type GraphView = "panel" | "collapsed" | "full"
 
 interface State {
   view: View
@@ -29,6 +32,9 @@ interface State {
   /** the shared chat: every Meko call, oldest first */
   calls: MekoCall[]
   panelTab: PanelTab
+  graphView: GraphView
+  /** agent the chat is narrowed to, after picking it on the graph or in the sidebar */
+  chatAgent: string | null
   /** event picked in the chat, lit up on the graph */
   highlight: string | null
   searchOpen: boolean
@@ -48,6 +54,8 @@ type Action =
   | { type: "tab"; tab: PanelTab }
   | { type: "highlight"; eventId: string | null }
   | { type: "calls"; calls: MekoCall[] }
+  | { type: "graphView"; view: GraphView }
+  | { type: "chatAgent"; agent: string | null }
 
 const HOME: View = { kind: "run", id: "run-42" }
 const DEFAULT_TRACE = "ev02" // price v1, the ₹499 that reached the published post
@@ -56,13 +64,16 @@ const initial: State = {
   view: HOME,
   history: [],
   mode: "graph",
-  replayN: EVENTS.length,
-  playing: false,
+  // the run streams in on load, one Meko call at a time, the way it arrives over /v1/stream
+  replayN: 0,
+  playing: true,
   trace: null,
   traceKey: 0,
   issues: ISSUES,
   calls: CALLS,
   panelTab: "chat",
+  graphView: "panel",
+  chatAgent: null,
   highlight: null,
   searchOpen: false,
 }
@@ -76,8 +87,9 @@ const leaveTrace = (s: State): State => {
 function reducer(s: State, a: Action): State {
   switch (a.type) {
     case "go": {
-      if (s.view.kind === a.view.kind && s.view.id === a.view.id) return { ...s, panelTab: "details" }
-      const next = { ...s, view: a.view, panelTab: "details" as const, history: [...s.history, s.view].slice(-20) }
+      const chatAgent = a.view.kind === "agent" ? a.view.id : s.chatAgent
+      if (s.view.kind === a.view.kind && s.view.id === a.view.id) return { ...s, panelTab: "details", chatAgent }
+      const next = { ...s, view: a.view, panelTab: "details" as const, chatAgent, history: [...s.history, s.view].slice(-20) }
       return s.mode === "trace" && a.view.kind !== "trace" ? { ...next, mode: "graph", trace: null } : next
     }
     case "back": {
@@ -88,7 +100,7 @@ function reducer(s: State, a: Action): State {
       return { ...s, view, history, mode: s.mode === "trace" ? "graph" : s.mode, trace: s.mode === "trace" ? null : s.trace }
     }
     case "mode": {
-      const base = leaveTrace(s)
+      const base = { ...leaveTrace(s), graphView: s.graphView === "collapsed" ? ("panel" as const) : s.graphView }
       return a.mode === "replay"
         ? { ...base, mode: "replay", replayN: 0, playing: true }
         : { ...base, mode: "graph", replayN: EVENTS.length, playing: false }
@@ -105,6 +117,7 @@ function reducer(s: State, a: Action): State {
         traceKey: s.traceKey + 1,
         view,
         panelTab: "details",
+        graphView: s.graphView === "collapsed" ? "panel" : s.graphView,
         history: same ? s.history : [...s.history, s.view].slice(-20),
       }
     }
@@ -128,6 +141,10 @@ function reducer(s: State, a: Action): State {
       return { ...s, highlight: a.eventId }
     case "calls":
       return { ...s, calls: [...s.calls, ...a.calls] }
+    case "graphView":
+      return { ...s, graphView: a.view }
+    case "chatAgent":
+      return { ...s, chatAgent: a.agent }
   }
 }
 
@@ -148,6 +165,8 @@ interface Tower {
   setTab: (tab: PanelTab) => void
   setHighlight: (eventId: string | null) => void
   postNote: (text: string) => void
+  setGraphView: (view: GraphView) => void
+  setChatAgent: (agent: string | null) => void
 }
 
 const TowerContext = createContext<Tower | null>(null)
@@ -164,6 +183,8 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   const setSearchOpen = useCallback((open: boolean) => dispatch({ type: "search", open }), [])
   const setTab = useCallback((tab: PanelTab) => dispatch({ type: "tab", tab }), [])
   const setHighlight = useCallback((eventId: string | null) => dispatch({ type: "highlight", eventId }), [])
+  const setGraphView = useCallback((view: GraphView) => dispatch({ type: "graphView", view }), [])
+  const setChatAgent = useCallback((agent: string | null) => dispatch({ type: "chatAgent", agent }), [])
   const postNote = useCallback((text: string) => {
     dispatch({ type: "calls", calls: [call({ actor: "you", kind: "note", datapack: "content-team", text })] })
   }, [])
@@ -190,21 +211,24 @@ export function TowerProvider({ children }: { children: ReactNode }) {
     [state.issues],
   )
 
-  // replay steps through one event at a time
+  // the stream and replay step through one event at a time
   useEffect(() => {
     if (!state.playing) return
-    const t = setInterval(() => dispatch({ type: "tick" }), 750)
+    const t = setInterval(() => dispatch({ type: "tick" }), 900)
     return () => clearInterval(t)
   }, [state.playing])
 
-  // stands in for the fix.ready event on /v1/stream
+  // stands in for the fix.ready event on /v1/stream, a few seconds after the run ends
+  const runEnded = state.replayN >= EVENTS.length
+  const lateFixPending = state.issues.some((i) => i.issue_id === LATE_FIX.issue_id && !i.fix)
   useEffect(() => {
+    if (!runEnded || !lateFixPending) return
     const t = setTimeout(() => {
       dispatch({ type: "fixReady", issueId: LATE_FIX.issue_id, fix: LATE_FIX.fix })
       toast("Claude drafted a fix for Publisher", { description: "Skipped handoff · routing change" })
-    }, 5000)
+    }, 3500)
     return () => clearTimeout(t)
-  }, [])
+  }, [runEnded, lateFixPending])
 
   // ⌘K / Ctrl+K opens search
   useEffect(() => {
@@ -219,10 +243,16 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   }, [state.searchOpen])
 
   const value = useMemo(
-    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote }),
-    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote],
+    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, setGraphView, setChatAgent }),
+    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, setGraphView, setChatAgent],
   )
   return <TowerContext.Provider value={value}>{children}</TowerContext.Provider>
+}
+
+/** Issues whose offending event has already streamed in; the detectors can't have raised the rest yet. */
+export function seenIssues(s: State) {
+  const shown = new Set(EVENTS.slice(0, s.replayN).map((e) => e.event_id))
+  return s.issues.filter((i) => shown.has(i.evidence.at(-1)!))
 }
 
 export function useTower() {
