@@ -8,7 +8,7 @@
 #   raw durations (this module). Bucket-level p95s exist only for the LIVE
 #   chart, where per-second approximation is acceptable mid-run.
 #
-# WHY nearest-rank (not linear interpolation):
+# WHY nearest-rank (not linear i nterpolation):
 #   The reported p95 should be a duration we ACTUALLY observed — an operator
 #   can then find that request in the raw samples ("p95 was 412ms" means some
 #   real request took 412ms). Interpolation invents values between samples,

@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SidebarContent } from "./sidebar"
 import { useTower, type Mode } from "./tower-store"
+import { AuthButton } from "./auth-button"
 
 const MODES: { value: Mode; label: string }[] = [
   { value: "graph", label: "Graph" },
@@ -68,6 +69,8 @@ export function TopBar() {
         <Icon name="flag" size={18} />
         <span className="hidden sm:inline">Conclude session</span>
       </Button>
+
+      <AuthButton />
     </header>
   )
 }
