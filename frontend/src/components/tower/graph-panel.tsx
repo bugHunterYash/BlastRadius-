@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { ReactFlowProvider } from "@xyflow/react"
-import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen, Waypoints } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import type { CallKind } from "@/lib/types"
 import { Counters } from "./counters"
 import { MemoryGraph } from "./memory-graph"
-import { Legend, ReplayBar } from "./replay-bar"
+import { ActivityStrip } from "./activity-strip"
+import { ReplayBar } from "./replay-bar"
 import { SharedChat, useVisibleCalls } from "./shared-chat"
 import { useTower } from "./tower-store"
 
@@ -59,16 +61,17 @@ export function Workspace() {
           aria-orientation="vertical"
           aria-label="Resize graph panel"
           onPointerDown={startDrag}
-          className="group relative hidden w-px shrink-0 cursor-col-resize bg-border lg:block"
+          className="group relative hidden w-3 shrink-0 cursor-col-resize lg:block"
         >
-          <span className={cn("absolute inset-y-0 -left-1 -right-1 transition-colors group-hover:bg-foreground/15", dragging && "bg-foreground/20")} />
+          <span className={cn("absolute inset-y-1/2 left-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-border transition-colors group-hover:bg-foreground/25", dragging && "bg-primary")} />
         </div>
       )}
 
       <section
         aria-label="Memory graph"
         className={cn(
-          "flex min-h-0 shrink-0 flex-col border-t bg-card lg:border-t-0",
+          // a white card floating on the tinted page, like the product panels on Upstash
+          "flex min-h-0 shrink-0 flex-col overflow-hidden border-t bg-card lg:my-3 lg:mr-3 lg:rounded-2xl lg:border lg:shadow-[0_1px_2px_rgb(18_32_26/0.04),0_12px_32px_-16px_rgb(18_32_26/0.12)]",
           graphView === "panel" && "h-[70vh] min-h-[460px] lg:h-auto lg:w-[var(--panel-w)]",
           graphView === "collapsed" && "h-14 lg:h-auto lg:w-14",
           graphView === "full" && "h-[85vh] flex-1 lg:h-auto",
@@ -84,35 +87,81 @@ export function Workspace() {
 function GraphPane() {
   const { state, setGraphView } = useTower()
   const full = state.graphView === "full"
+  const [showReads, setShowReads] = useState(true)
+  const [showHandoffs, setShowHandoffs] = useState(true)
+  const [showLabels, setShowLabels] = useState(true)
   return (
     <>
       <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-        <Waypoints className="size-4 text-muted-foreground" />
-        <span className="text-[13.5px] font-medium">Memory graph</span>
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="text-[15px] font-semibold">Memory graph</span>
+        <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
           <span className={cn("size-1.5 rounded-full", state.playing ? "animate-pulse bg-flag" : "bg-mint")} />
           {state.mode === "trace" ? "Trace" : state.mode === "replay" ? "Replay" : state.playing ? "Live" : "Run ended"}
         </span>
         <div className="ml-auto flex items-center gap-0.5">
           <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={full ? "Show the chat again" : "Expand the graph"} onClick={() => setGraphView(full ? "panel" : "full")}>
-            {full ? <Minimize2 /> : <Maximize2 />}
+            <Icon name={full ? "close_fullscreen" : "open_in_full"} size={20} />
           </Button>
           {!full && (
             <Button variant="ghost" size="icon-sm" className="hidden text-muted-foreground lg:inline-flex" aria-label="Fold the graph away" onClick={() => setGraphView("collapsed")}>
-              <PanelRightClose />
+              <Icon name="right_panel_close" size={20} />
             </Button>
           )}
         </div>
       </div>
-      <div className="relative min-h-0 flex-1">
+      {/* what the graph draws */}
+      <div className="flex h-11 shrink-0 items-center gap-5 overflow-x-auto border-b px-4 text-[13.5px] font-semibold text-ink-2">
+        <Toggle id="t-reads" label="Reads" checked={showReads} onChange={setShowReads} />
+        <Toggle id="t-handoffs" label="Handoffs" checked={showHandoffs} onChange={setShowHandoffs} />
+        <Toggle id="t-labels" label="Memory names" checked={showLabels} onChange={setShowLabels} />
+      </div>
+      <div className="relative min-h-0 flex-1 bg-paper">
         <ReactFlowProvider>
-          <MemoryGraph />
+          <MemoryGraph showReads={showReads} showHandoffs={showHandoffs} showLabels={showLabels} />
         </ReactFlowProvider>
         <Counters />
-        <Legend />
+        <GraphKey />
         <ReplayBar />
       </div>
+      <ActivityStrip />
     </>
+  )
+}
+
+function Toggle({ id, label, checked, onChange }: { id: string; label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label htmlFor={id} className="flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap">
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+      {label}
+    </label>
+  )
+}
+
+/** What the colours and shapes mean, always visible in the corner of the graph. */
+function GraphKey() {
+  const { state } = useTower()
+  if (state.mode === "replay") return null
+  return (
+    <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex flex-col gap-1.5 rounded-xl border bg-card/90 px-3 py-2.5 text-[13px] text-ink-2 backdrop-blur-sm">
+      <span className="flex items-center gap-2">
+        <span className="size-3 rounded-full border-[1.5px]" style={{ borderColor: "var(--agent-researcher)", background: "color-mix(in oklab, var(--agent-researcher) 10%, white)" }} />
+        Agent, one colour each
+      </span>
+      <span className="flex items-center gap-2">
+        <span className="size-2.5 rounded-[3px] bg-primary" />
+        Memory in Meko
+      </span>
+      <span className="flex items-center gap-2">
+        <span className="w-3 border-t-[1.5px] border-ink/60" />
+        Write
+        <span className="ml-1 w-3 border-t border-dashed border-ink/50" />
+        Read / handoff
+      </span>
+      <span className="flex items-center gap-2">
+        <span className="size-3 rounded-full border border-[var(--ripple)] bg-[var(--ripple)]/15" />
+        Needs review
+      </span>
+    </div>
   )
 }
 
@@ -131,13 +180,13 @@ function CollapsedStrip() {
   return (
     <div className="flex h-full items-center gap-3 px-3 lg:flex-col lg:px-0 lg:py-3">
       <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Open the graph" onClick={() => setGraphView("panel")}>
-        <PanelRightOpen />
+        <Icon name="right_panel_open" size={20} />
       </Button>
       <div className="flex gap-3 lg:mt-2 lg:flex-col lg:gap-4">
         {STRIP.map(({ kind, label }) => (
           <div key={kind} className="text-center" title={label}>
-            <div className="text-sm font-semibold tabular-nums">{calls.filter((c) => c.kind === kind).length}</div>
-            <div className="text-[10px] text-muted-foreground">{label.slice(0, 5)}</div>
+            <div className="text-[15px] font-bold tabular-nums">{calls.filter((c) => c.kind === kind).length}</div>
+            <div className="text-[11.5px] text-muted-foreground">{label.slice(0, 5)}</div>
           </div>
         ))}
       </div>
