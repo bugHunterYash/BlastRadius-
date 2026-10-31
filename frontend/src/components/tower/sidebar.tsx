@@ -80,7 +80,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           aria-label="Switch between light and dark"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         >
-          <Icon name={resolvedTheme === "dark" ? "light_mode" : "dark_mode"} size={20} />
+          <Icon name="contrast" size={20} />
         </Button>
       </div>
     </div>

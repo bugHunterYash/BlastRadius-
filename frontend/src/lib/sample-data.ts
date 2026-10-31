@@ -15,6 +15,47 @@ export const DESIGN: DesignSpec = {
   },
 }
 
+/**
+ * What the agents were building. The session report reads this to speak in the project's own terms:
+ * its phases, what the deliverable is called, and which agent owns each phase.
+ */
+export type ProjectKind = "content" | "website" | "training" | "finetune"
+
+export interface ProjectPhase {
+  id: string
+  label: string
+  agent: string
+}
+
+export interface Project {
+  name: string
+  kind: ProjectKind
+  goal: string
+  deliverable: string
+  phases: ProjectPhase[]
+}
+
+/** Default vocabulary per kind of project, used when a project doesn't spell out its own. */
+export const PROJECT_TEMPLATES: Record<ProjectKind, { label: string; deliverable: string; phases: string[] }> = {
+  content: { label: "Content pipeline", deliverable: "post", phases: ["Research", "Draft", "Review", "Publish"] },
+  website: { label: "Website build", deliverable: "site", phases: ["Design", "Build", "Test", "Deploy"] },
+  training: { label: "Agent training", deliverable: "agent", phases: ["Collect data", "Train", "Evaluate", "Ship"] },
+  finetune: { label: "Model fine-tune", deliverable: "model", phases: ["Prepare data", "Fine-tune", "Evaluate", "Release"] },
+}
+
+export const PROJECT: Project = {
+  name: "Aurora X1 launch post",
+  kind: "content",
+  goal: "Research the Aurora X1 headphones, write the launch post, review it and publish it.",
+  deliverable: "launch post",
+  phases: [
+    { id: "research", label: "Research", agent: "researcher" },
+    { id: "draft", label: "Draft", agent: "writer" },
+    { id: "review", label: "Review", agent: "reviewer" },
+    { id: "publish", label: "Publish", agent: "publisher" },
+  ],
+}
+
 export const AGENT_ROLES: Record<string, string> = {
   researcher: "Finds facts and prices for the launch.",
   writer: "Writes the launch post from the facts.",
