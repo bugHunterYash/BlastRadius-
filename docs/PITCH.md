@@ -2,7 +2,7 @@
 
 Pitch ka order judging criteria ke hisaab se hai: Problem & Value (10), Solution & Innovation (5), AI/Agent Engineering (5), Demo & Communication (5).
 
-Prototype images: [docs/mockups/](mockups/). Web dashboard: `dashboard.png`. Terminal: `cli.png`.
+Prototype images: [docs/mockups/](mockups/). Demo ke liye simple versions dikhao: `dashboard-simple.png`, `cli-simple.png`, `pricing.png`. Detailed views (`dashboard.png`, `cli.png`) "Show evidence" ke andar hain.
 
 > **Zaroori:** is doc ke saare numbers (91%, 5× / 100 rps, waghera) **sirf example** hain. Final demo se pehle real run karo aur wahi numbers bolo jo screen par "live" badge ke saath dikhein.
 
@@ -123,7 +123,7 @@ MAP  →  BREAK  →  MEASURE  →  FIX  →  PROVE
 | "Statistically significant kaise pata?" | Error rate ke liye two-proportion z-test, latency ke liye Mann-Whitney U. p < 0.01 **aur** minimum effect size dono chahiye. |
 | "Real production par chala sakte ho?" | Nahi, aur yeh design se hai. Production markers dikhne par tool refuse karta hai. Yeh pre-production sandbox ke liye hai. |
 | "500 rps se zyada?" | Laptop safety cap hai. Hamara goal "kitna bada load" nahi hai, balki "kahan tootega" honestly batana hai. Multiplier steps se breaking point milta hai. |
-| "Business model?" | Open-source core free. Paid tier mein team dashboards, CI integration (har PR par resilience test) aur scheduled runs. |
+| "Business model?" | Open-core freemium. Free: local CLI + dashboard. Pro ₹699/dev/month: built-in AI, shareable report, GitHub Action PR gate, nightly runs. Team ₹3,999/month. Enterprise custom. Plus ₹25–50k Resilience Audit service. Test customer ki machine par chalta hai, isliye hamari cost ≈ 0 aur margin 85%+. Details: [PRODUCT.md](PRODUCT.md). |
 
 ## Speaking split
 
