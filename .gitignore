@@ -17,6 +17,8 @@ htmlcov/
 
 # Local databases & state
 *.db
+*.db-shm
+*.db-wal
 *.sqlite3
 blastradius.db
 

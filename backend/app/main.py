@@ -8,14 +8,22 @@
 # imported lazily or monkeypatched; wiring is explicit at construction.
 #
 # Routers: architecture (parse/graph/impact), experiments (lifecycle/samples),
-# reports (report/fix-prompt/compare), stream (SSE).
+# reports (report/fix-prompt/compare), stream (SSE), site (landing page:
+# waitlist + public stats).
+#
+# CORS: the dashboard dev server (Vite, :5173) is a different origin from the
+# API (:8000). Allowed origins come from BR_CORS_ORIGINS (comma-separated) so
+# a deployed site can be added without a code change.
 # =============================================================================
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+import os
 
-from backend.app.api import architecture, experiments, reports, stream
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.app.api import architecture, experiments, reports, site, stream
 from backend.app.state import AppState
 
 
@@ -30,10 +38,20 @@ def create_app(state: AppState) -> FastAPI:
         ),
     )
     app.state.br = state
+    origins = os.environ.get(
+        "BR_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[o.strip() for o in origins.split(",") if o.strip()],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
     app.include_router(architecture.router)
     app.include_router(experiments.router)
     app.include_router(reports.router)
     app.include_router(stream.router)
+    app.include_router(site.router)
 
     @app.get("/api/system/health")
     def health() -> dict:

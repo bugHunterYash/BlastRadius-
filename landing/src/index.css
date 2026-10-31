@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* position: relative lets framer-motion measure scroll offsets for the hero tilt. */
+  html { scroll-behavior: smooth; position: relative; }
+  body {
+    @apply bg-ink-950 text-ink-100 font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection { background: rgba(255, 106, 61, 0.35); color: #fff; }
+  :focus-visible { outline: 2px solid #ff6a3d; outline-offset: 3px; border-radius: 6px; }
+}
+
+@layer utilities {
+  /* Brushed-metal headline text, as in the monochrome reference. */
+  .chrome-text {
+    background: linear-gradient(180deg, #ffffff 0%, #e4e4e7 38%, #8b8b94 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .blast-text {
+    background: linear-gradient(100deg, #ffb38a 0%, #ff6a3d 45%, #ff3d6e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 28px rgba(255, 106, 61, 0.35));
+  }
+  .chrome-text-soft {
+    background: linear-gradient(180deg, #ececf1 0%, #8e8e9a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .fade-mask {
+    -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  }
+  .edge-fade {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      0 40px 80px -30px rgba(0, 0, 0, 0.9);
+  }
+  .chrome-border {
+    background:
+      linear-gradient(#0f0f12, #0f0f12) padding-box,
+      linear-gradient(160deg, #ffffff, #52525b 40%, #a1a1aa 70%, #3f3f46) border-box;
+    border: 1px solid transparent;
+  }
+}
+
+/* Slow-drifting colour glows behind the hero and CTA. */
+@keyframes aurora {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(6%, -8%) scale(1.12); }
+  66% { transform: translate(-7%, 5%) scale(0.94); }
+}
+.aurora { animation: aurora 16s ease-in-out infinite; }
+.aurora-slow { animation: aurora 24s ease-in-out infinite reverse; }
+
+@keyframes shine {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.btn-shine {
+  background-image: linear-gradient(110deg, #fff 40%, #ffd9c7 50%, #fff 60%);
+  background-size: 200% 100%;
+  animation: shine 3.5s linear infinite;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2), 0 10px 40px -8px rgba(255, 106, 61, 0.55);
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 38s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee, .aurora, .aurora-slow, .btn-shine { animation: none; }
+  html { scroll-behavior: auto; }
+}
