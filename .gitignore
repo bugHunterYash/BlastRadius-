@@ -1,0 +1,39 @@
+# Virtual Environment - NEVER COMMIT
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases & state
+*.db
+*.sqlite3
+blastradius.db
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Temporary & Log files
+*.log
+scratch/
+tmp/

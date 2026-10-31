@@ -1,0 +1,74 @@
+// =============================================================================
+// k6 load-test script — GENERATED FILE, DO NOT EDIT BY HAND
+// =============================================================================
+// Rendered by core/load/script.py from a validated LoadConfig. Users never
+// supply JavaScript (safety model: no arbitrary code). All user-derived
+// values (base URL, endpoint paths) are JSON-escaped by the renderer before
+// they touch this template.
+//
+// WHY ramping-arrival-rate (open model): k6 schedules iterations at a TARGET
+// RATE regardless of how long each request takes. A closed model ("N virtual
+// users looping") slows down when the server slows down, which HIDES the
+// collapse we are trying to measure (coordinated omission). The open model
+// keeps applying the planned arrival rate and lets the queue grow — which is
+// exactly what "hitting the wall" looks like.
+//
+// WHY thresholds with abortOnFail: this is safety layer 3 (Pydantic → runner
+// re-check → THIS). If layers 1-2 are somehow bypassed, k6 itself aborts when
+// the error rate crosses the safety limit or p95 crosses 5s. delayAbortEval
+// gives a few seconds of grace so one noisy bucket doesn't kill the run —
+// mirrors SafetyLimits.consecutive_seconds semantics.
+// =============================================================================
+
+import http from 'k6/http';
+import { check } from 'k6';
+import exec from 'k6/execution';
+
+// JSON-escaped literals injected by the renderer — never raw user strings.
+const BASE = {{ base_url_json }};
+const ENDPOINTS = {{ endpoints_json }};
+const TIMEOUT = {{ timeout_json }};
+
+export const options = {
+  scenarios: {
+    load: {
+      executor: 'ramping-arrival-rate',
+      startRate: {{ start_rate }},
+      timeUnit: '1s',
+      stages: {{ stages_json }},
+      maxVUs: {{ max_vus }},
+      gracefulStop: '10s',
+    },
+  },
+  // Safety net (layer 3). If either threshold trips, k6 aborts the whole
+  // test — the Python watchdog may have been bypassed; this one cannot be,
+  // short of editing the script file between render and run (blocked by
+  // hashing the script in the runner).
+  thresholds: {
+    http_req_failed: [{
+      threshold: 'rate<{{ max_error_rate }}',
+      abortOnFail: true,
+      delayAbortEval: '10s',
+    }],
+    http_req_duration: [{
+      threshold: 'p(95)<{{ max_p95_ms }}',
+      abortOnFail: true,
+      delayAbortEval: '10s',
+    }],
+  },
+};
+
+export default function () {
+  // Deterministic round-robin over endpoints (iterationInTest), so the
+  // request mix in the report matches the config exactly — no RNG to debug
+  // when per-endpoint numbers look odd.
+  const path = ENDPOINTS[exec.scenario.iterationInTest % ENDPOINTS.length];
+  // tags.name = the PATH (not the full URL): the collector attributes every
+  // k6 Point to an endpoint via this tag — evidence rules (error rate per
+  // endpoint) depend on it being the schema-validated path, stable across
+  // hosts.
+  const res = http.get(BASE + path, { timeout: TIMEOUT, tags: { name: path } });
+  // Keep one cheap check so the `checks` metric exists in the JSON stream
+  // (useful sanity counter: k6-side success vs HTTP-level failure).
+  check(res, { 'status < 500': (r) => r.status < 500 });
+}

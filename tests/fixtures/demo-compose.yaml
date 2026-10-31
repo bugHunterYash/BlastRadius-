@@ -1,0 +1,79 @@
+# The reference compose file used by parser/graph tests — mirrors
+# demo-app/compose.yaml from the spec (teaching moments preserved:
+# worker has NO depends_on → its redis/pg edges must be inferred from env).
+# Kept as a fixture so parser tests don't need the demo stack running.
+
+name: blastradius-demo
+
+services:
+  demo-frontend:
+    build: ./frontend
+    ports: ["127.0.0.1:8080:80"]
+    depends_on: [demo-api]
+    labels:
+      blastradius.env: test
+    networks: [br-target]
+
+  demo-api:
+    build: ./api
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      NODE_ENV: test
+      REDIS_URL: redis://demo-redis:6379
+      DATABASE_URL: postgres://demo:demo@demo-postgres:5432/demo
+      PG_POOL_MAX: "10"
+    depends_on:
+      demo-redis: { condition: service_healthy }
+      demo-postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health/live"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+    labels:
+      blastradius.env: test
+      blastradius.fault-allowed: "true"
+    networks: [br-target]
+
+  demo-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+    labels:
+      blastradius.env: test
+      blastradius.fault-allowed: "true"
+    networks: [br-target]
+
+  demo-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: demo
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+    labels:
+      blastradius.env: test
+    networks: [br-target]
+
+  demo-worker:
+    build: ./worker
+    environment:
+      REDIS_HOST: demo-redis
+      DATABASE_URL: postgres://demo:demo@demo-postgres:5432/demo
+    labels:
+      blastradius.env: test
+    networks: [br-target]
+
+networks:
+  br-target:
+    name: br-target
+    driver: bridge
