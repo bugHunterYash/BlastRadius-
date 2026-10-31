@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react"
 import { toast } from "sonner"
 import { traceFrom, type Trace } from "@/lib/graph"
 import { cap } from "@/lib/format"
@@ -35,6 +35,8 @@ interface State {
   graphView: GraphView
   /** agent the chat is narrowed to, after picking it on the graph or in the sidebar */
   chatAgent: string | null
+  /** the end-of-session report is open */
+  reportOpen: boolean
   /** event picked in the chat, lit up on the graph */
   highlight: string | null
   searchOpen: boolean
@@ -56,6 +58,7 @@ type Action =
   | { type: "calls"; calls: MekoCall[] }
   | { type: "graphView"; view: GraphView }
   | { type: "chatAgent"; agent: string | null }
+  | { type: "report"; open: boolean }
 
 const HOME: View = { kind: "run", id: "run-42" }
 const DEFAULT_TRACE = "ev02" // price v1, the ₹499 that reached the published post
@@ -74,6 +77,7 @@ const initial: State = {
   panelTab: "chat",
   graphView: "panel",
   chatAgent: null,
+  reportOpen: false,
   highlight: null,
   searchOpen: false,
 }
@@ -145,6 +149,8 @@ function reducer(s: State, a: Action): State {
       return { ...s, graphView: a.view }
     case "chatAgent":
       return { ...s, chatAgent: a.agent }
+    case "report":
+      return { ...s, reportOpen: a.open, playing: a.open ? false : s.playing, replayN: a.open ? EVENTS.length : s.replayN }
   }
 }
 
@@ -167,6 +173,7 @@ interface Tower {
   postNote: (text: string) => void
   setGraphView: (view: GraphView) => void
   setChatAgent: (agent: string | null) => void
+  setReportOpen: (open: boolean) => void
 }
 
 const TowerContext = createContext<Tower | null>(null)
@@ -185,6 +192,7 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   const setHighlight = useCallback((eventId: string | null) => dispatch({ type: "highlight", eventId }), [])
   const setGraphView = useCallback((view: GraphView) => dispatch({ type: "graphView", view }), [])
   const setChatAgent = useCallback((agent: string | null) => dispatch({ type: "chatAgent", agent }), [])
+  const setReportOpen = useCallback((open: boolean) => dispatch({ type: "report", open }), [])
   const postNote = useCallback((text: string) => {
     dispatch({ type: "calls", calls: [call({ actor: "you", kind: "note", datapack: "content-team", text })] })
   }, [])
@@ -218,6 +226,22 @@ export function TowerProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(t)
   }, [state.playing])
 
+  // when the run ends, offer its report
+  const ended = state.replayN >= EVENTS.length && state.mode === "graph" && !state.reportOpen
+  const reportOffered = useRef(false)
+  useEffect(() => {
+    if (!ended || reportOffered.current) return
+    const t = setTimeout(() => {
+      reportOffered.current = true
+      toast("The run has ended", {
+          description: "See how your agents did and what to fix before the next run.",
+        action: { label: "View report", onClick: () => dispatch({ type: "report", open: true }) },
+        duration: 10000,
+      })
+    }, 8000)
+    return () => clearTimeout(t)
+  }, [ended])
+
   // stands in for the fix.ready event on /v1/stream, a few seconds after the run ends
   const runEnded = state.replayN >= EVENTS.length
   const lateFixPending = state.issues.some((i) => i.issue_id === LATE_FIX.issue_id && !i.fix)
@@ -243,8 +267,8 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   }, [state.searchOpen])
 
   const value = useMemo(
-    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, setGraphView, setChatAgent }),
-    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, setGraphView, setChatAgent],
+    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, setGraphView, setChatAgent, setReportOpen }),
+    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, setGraphView, setChatAgent, setReportOpen],
   )
   return <TowerContext.Provider value={value}>{children}</TowerContext.Provider>
 }

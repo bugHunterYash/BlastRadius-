@@ -15,7 +15,7 @@ const MODES: { value: Mode; label: string }[] = [
 ]
 
 export function TopBar() {
-  const { state, setMode, setSearchOpen } = useTower()
+  const { state, setMode, setSearchOpen, setReportOpen } = useTower()
   const [navOpen, setNavOpen] = useState(false)
 
   return (
@@ -61,6 +61,12 @@ export function TopBar() {
         <Icon name="search" size={18} />
         Search
         <kbd className="font-mono text-[12.5px]">⌘K</kbd>
+      </Button>
+
+      {/* ends the session and opens its report */}
+      <Button className="h-9 gap-1.5 rounded-lg px-3 text-[14px] font-bold" onClick={() => setReportOpen(true)}>
+        <Icon name="flag" size={18} />
+        <span className="hidden sm:inline">Conclude session</span>
       </Button>
     </header>
   )

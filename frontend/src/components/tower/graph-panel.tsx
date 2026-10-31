@@ -50,7 +50,7 @@ export function Workspace() {
   return (
     <div ref={box} className={cn("flex min-h-0 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden", dragging && "cursor-col-resize select-none")}>
       {graphView !== "full" && (
-        <main aria-label="Shared memory chat" className="h-[80vh] min-h-0 min-w-0 flex-1 lg:h-auto">
+        <main aria-label="Shared memory chat" className="h-[80vh] min-h-0 min-w-0 shrink-0 lg:h-auto lg:flex-1 lg:shrink">
           <SharedChat />
         </main>
       )}
@@ -142,7 +142,7 @@ function GraphKey() {
   const { state } = useTower()
   if (state.mode === "replay") return null
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex flex-col gap-1.5 rounded-xl border bg-card/90 px-3 py-2.5 text-[13px] text-ink-2 backdrop-blur-sm">
+    <div className="pointer-events-none absolute bottom-3 left-3 z-10 hidden flex-col gap-1.5 rounded-xl border bg-card/90 sm:flex px-3 py-2.5 text-[13px] text-ink-2 backdrop-blur-sm">
       <span className="flex items-center gap-2">
         <span className="size-3 rounded-full border-[1.5px]" style={{ borderColor: "var(--agent-researcher)", background: "color-mix(in oklab, var(--agent-researcher) 10%, white)" }} />
         Agent, one colour each

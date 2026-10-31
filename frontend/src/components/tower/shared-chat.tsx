@@ -146,7 +146,7 @@ function PersonTurn({ call: c }: { call: MekoCall }) {
 
 /** Top of the chat: live while the run streams, then the Summarizer's digest. */
 function RunHeader() {
-  const { state, go } = useTower()
+  const { state, go, setReportOpen } = useTower()
   const run = RUNS[0]
   const ended = state.replayN >= EVENTS.length
   const open = seenIssues(state).filter(isOpen)
@@ -164,6 +164,12 @@ function RunHeader() {
           </p>
         </motion.div>
       </AnimatePresence>
+      {ended && (
+        <Button className="mt-5 h-10 gap-2 rounded-xl px-4 text-[15px] font-bold" onClick={() => setReportOpen(true)}>
+          <Icon name="insights" size={20} />
+          View session report
+        </Button>
+      )}
       {open.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-2">
           <AnimatePresence initial={false}>

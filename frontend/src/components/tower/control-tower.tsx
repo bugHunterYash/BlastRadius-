@@ -3,6 +3,7 @@
 import { CommandMenu } from "./command-menu"
 import { Workspace } from "./graph-panel"
 import { DetailsDrawer } from "./panel"
+import { SessionReportView } from "./session-report"
 import { Sidebar } from "./sidebar"
 import { TopBar } from "./top-bar"
 import { TowerProvider } from "./tower-store"
@@ -19,6 +20,7 @@ export function ControlTower() {
       </div>
       <DetailsDrawer />
       <CommandMenu />
+      <SessionReportView />
     </TowerProvider>
   )
 }
