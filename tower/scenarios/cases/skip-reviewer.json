@@ -1,0 +1,56 @@
+{
+  "name": "skip-reviewer",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹499"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "facts by researcher"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "price"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "draft",
+      "value": "draft by writer"
+    },
+    {
+      "agent": "writer",
+      "op": "handoff",
+      "to": "publisher"
+    },
+    {
+      "agent": "publisher",
+      "op": "read",
+      "fact_key": "draft"
+    },
+    {
+      "agent": "publisher",
+      "op": "write",
+      "fact_key": "published",
+      "value": "published by publisher"
+    }
+  ],
+  "expect": [
+    {
+      "type": "skipped_handoff",
+      "agent": "publisher",
+      "fact_key": "published"
+    }
+  ]
+}

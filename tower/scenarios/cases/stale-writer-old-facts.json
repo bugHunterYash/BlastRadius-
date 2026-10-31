@@ -1,0 +1,35 @@
+{
+  "name": "stale-writer-old-facts",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "v1"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "v2"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "facts",
+      "force_version": 1
+    }
+  ],
+  "expect": [
+    {
+      "type": "stale_read",
+      "agent": "writer",
+      "fact_key": "facts"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+agent: reviewer
+prompt: "Check the draft against the latest price and facts, then write a review."
+handoff_rule: "start when writer hands off"
+routing: "hand off to publisher"

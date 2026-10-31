@@ -1,0 +1,8 @@
+{"event_type": "session.started", "payload": {"thread_id": "replay-thread", "model": "gpt-5.6-terra (recorded)", "sandbox": {"type": "readOnly"}}}
+{"event_type": "message.completed", "payload": {"text": "I'll check the local pricing file."}}
+{"event_type": "command.started", "why": "I'll check the local pricing file.", "payload": {"command": "powershell.exe -Command \"Get-Content -LiteralPath 'pricing.md'\"", "why_source": "preceding_agent_message"}}
+{"event_type": "command.completed", "payload": {"command": "powershell.exe -Command \"Get-Content -LiteralPath 'pricing.md'\"", "status": "completed", "exit_code": 0, "output": "| Aqua bottle 750 ml | Rs. 549 | 31 Oct (was Rs. 499) |"}}
+{"event_type": "message.delta", "payload": {"text": "Rs. "}}
+{"event_type": "message.delta", "payload": {"text": "549"}}
+{"event_type": "message.completed", "payload": {"text": "Rs. 549"}}
+{"result": {"status": "completed", "final_response": "Rs. 549", "input_tokens": 30435, "output_tokens": 203, "metadata": {"recorded_from": "codex_app_server live run 2026-10-31"}}}

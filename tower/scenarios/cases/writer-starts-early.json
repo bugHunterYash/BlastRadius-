@@ -1,0 +1,29 @@
+{
+  "name": "writer-starts-early",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "price by researcher"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "price"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "draft",
+      "value": "draft by writer"
+    }
+  ],
+  "expect": [
+    {
+      "type": "skipped_handoff",
+      "agent": "writer",
+      "fact_key": "draft"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+agent: writer
+prompt: "Write a short launch post using the price and facts from memory."
+handoff_rule: "start when researcher hands off"
+routing: "hand off to publisher"

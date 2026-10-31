@@ -1,0 +1,81 @@
+{
+  "name": "clean-full-chain",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹499"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "facts by researcher"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "price"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "facts"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "draft",
+      "value": "draft by writer"
+    },
+    {
+      "agent": "writer",
+      "op": "handoff",
+      "to": "reviewer"
+    },
+    {
+      "agent": "reviewer",
+      "op": "read",
+      "fact_key": "draft"
+    },
+    {
+      "agent": "reviewer",
+      "op": "read",
+      "fact_key": "price"
+    },
+    {
+      "agent": "reviewer",
+      "op": "write",
+      "fact_key": "review",
+      "value": "review by reviewer"
+    },
+    {
+      "agent": "reviewer",
+      "op": "handoff",
+      "to": "publisher"
+    },
+    {
+      "agent": "publisher",
+      "op": "read",
+      "fact_key": "draft"
+    },
+    {
+      "agent": "publisher",
+      "op": "read",
+      "fact_key": "review"
+    },
+    {
+      "agent": "publisher",
+      "op": "write",
+      "fact_key": "published",
+      "value": "published by publisher"
+    }
+  ],
+  "expect": []
+}

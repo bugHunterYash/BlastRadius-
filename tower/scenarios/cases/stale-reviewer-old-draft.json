@@ -1,0 +1,57 @@
+{
+  "name": "stale-reviewer-old-draft",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹499"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "facts by researcher"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "price"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "draft",
+      "value": "draft by writer"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "draft",
+      "value": "draft by writer"
+    },
+    {
+      "agent": "writer",
+      "op": "handoff",
+      "to": "reviewer"
+    },
+    {
+      "agent": "reviewer",
+      "op": "read",
+      "fact_key": "draft",
+      "force_version": 1
+    }
+  ],
+  "expect": [
+    {
+      "type": "stale_read",
+      "agent": "reviewer",
+      "fact_key": "draft"
+    }
+  ]
+}

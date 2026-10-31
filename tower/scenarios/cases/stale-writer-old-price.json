@@ -1,0 +1,35 @@
+{
+  "name": "stale-writer-old-price",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹499"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹549"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "price",
+      "force_version": 1
+    }
+  ],
+  "expect": [
+    {
+      "type": "stale_read",
+      "agent": "writer",
+      "fact_key": "price"
+    }
+  ]
+}
