@@ -1,11 +1,12 @@
 "use client"
 
-import { CircleAlert, History, Moon, Sun, Waypoints, type LucideIcon } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { isOpen, latestVersion } from "@/lib/graph"
 import { cap } from "@/lib/format"
+import { AgentGlyph } from "./agent-glyph"
 import { DESIGN, EVENTS, LAYOUT, PRIOR, RUNS } from "@/lib/sample-data"
 import { seenIssues, useTower, type ViewKind } from "./tower-store"
 
@@ -21,10 +22,10 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   }
   const active = (kind: ViewKind, id: string) => state.view.kind === kind && state.view.id === id
 
-  const NAV: { kind: ViewKind; id: string; icon: LucideIcon; label: string; count?: number; flag?: boolean }[] = [
-    { kind: "run", id: "run-42", icon: Waypoints, label: "Overview" },
-    { kind: "issues", id: "all", icon: CircleAlert, label: "Issues", count: open.length || undefined, flag: true },
-    { kind: "runs", id: "all", icon: History, label: "Runs", count: RUNS.length },
+  const NAV: { kind: ViewKind; id: string; icon: string; label: string; count?: number; flag?: boolean }[] = [
+    { kind: "run", id: "run-42", icon: "hub", label: "Overview" },
+    { kind: "issues", id: "all", icon: "error", label: "Issues", count: open.length || undefined, flag: true },
+    { kind: "runs", id: "all", icon: "history", label: "Runs", count: RUNS.length },
   ]
 
   return (
@@ -33,15 +34,15 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <span className="grid size-[22px] place-items-center rounded-md bg-foreground">
           <span className="size-2 rounded-full bg-background" />
         </span>
-        <span className="text-sm font-semibold">Control Tower</span>
+        <span className="text-[15px] font-bold">Control Tower</span>
       </div>
 
       <nav className="flex flex-col gap-px">
-        {NAV.map(({ kind, id, icon: Icon, label, count, flag }) => (
+        {NAV.map(({ kind, id, icon, label, count, flag }) => (
           <Item key={label} on={active(kind, id)} onClick={() => nav(kind, id)}>
-            <Icon className="size-4" strokeWidth={1.7} />
+            <Icon name={icon} size={20} />
             {label}
-            {count !== undefined && <span className={cn("ml-auto text-xs tabular-nums", flag ? "font-medium text-flag" : "text-muted-foreground")}>{count}</span>}
+            {count !== undefined && <span className={cn("ml-auto text-[13px] tabular-nums", flag ? "font-semibold text-flag" : "text-muted-foreground")}>{count}</span>}
           </Item>
         ))}
       </nav>
@@ -51,9 +52,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           const n = open.filter((i) => i.agent === a).length
           return (
             <Item key={a} on={active("agent", a)} onClick={() => nav("agent", a)}>
-              <span className="size-2 rounded-full bg-cobalt" />
+              <AgentGlyph agent={a} size={18} />
               {cap(a)}
-              {n > 0 && <span className="ml-auto text-xs font-medium text-flag">{n}</span>}
+              {n > 0 && <span className="ml-auto text-[13px] font-semibold text-flag">{n}</span>}
             </Item>
           )
         })}
@@ -64,12 +65,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Item key={f} on={active("fact", f)} onClick={() => nav("fact", f)}>
             <span className="size-[7px] rounded-full border-[1.5px] border-cobalt" />
             {f}
-            <span className="ml-auto font-mono text-[11px] text-muted-foreground">v{latestVersion(f, EVENTS, PRIOR)?.version}</span>
+            <span className="ml-auto font-mono text-[12.5px] text-muted-foreground">v{latestVersion(f, EVENTS, PRIOR)?.version}</span>
           </Item>
         ))}
       </Group>
 
-      <div className="mt-auto flex items-center gap-2 px-2 pt-3 text-[12.5px] text-muted-foreground">
+      <div className="mt-auto flex items-center gap-2 px-2 pt-3 text-[14px] text-muted-foreground">
         <span className="size-1.5 rounded-full bg-mint" />
         Live · content-team
         <Button
@@ -79,8 +80,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           aria-label="Switch between light and dark"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         >
-          <Sun className="hidden size-4 dark:block" />
-          <Moon className="size-4 dark:hidden" />
+          <Icon name={resolvedTheme === "dark" ? "light_mode" : "dark_mode"} size={20} />
         </Button>
       </div>
     </div>
@@ -90,7 +90,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-5 flex flex-col gap-px">
-      <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">{title}</div>
+      <div className="px-2 pb-1 text-[13px] font-semibold text-muted-foreground">{title}</div>
       {children}
     </div>
   )
@@ -103,8 +103,8 @@ function Item({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       onClick={onClick}
       aria-current={on ? "page" : undefined}
       className={cn(
-        "flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-left text-[13.5px] text-ink-2 transition-colors hover:bg-sidebar-accent hover:text-foreground",
-        on && "bg-sidebar-accent font-medium text-foreground",
+        "flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-left text-[15px] text-ink-2 transition-colors hover:bg-sidebar-accent hover:text-foreground",
+        on && "bg-sidebar-accent font-semibold text-foreground",
       )}
     >
       {children}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, Search } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -23,7 +23,7 @@ export function TopBar() {
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="xl:hidden" aria-label="Open navigation">
-            <Menu className="size-4" />
+            <Icon name="menu" size={22} />
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-[280px] p-0">
@@ -32,10 +32,10 @@ export function TopBar() {
         </SheetContent>
       </Sheet>
 
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13.5px] whitespace-nowrap text-muted-foreground">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[15px] whitespace-nowrap text-muted-foreground">
         <span className="hidden sm:inline">Runs</span>
         <span className="hidden sm:inline">/</span>
-        <span className="font-medium text-foreground">run-42</span>
+        <span className="font-semibold text-foreground">run-42</span>
       </nav>
 
       <ToggleGroup
@@ -50,7 +50,7 @@ export function TopBar() {
           <ToggleGroupItem
             key={m.value}
             value={m.value}
-            className="h-7 rounded-[7px]! border-0 px-3 text-[13px] text-ink-2 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:font-medium data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.08)]"
+            className="h-7 rounded-[7px]! border-0 px-3 text-[14.5px] text-ink-2 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:font-semibold data-[state=on]:text-foreground data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.08)]"
           >
             {m.label}
           </ToggleGroupItem>
@@ -58,9 +58,9 @@ export function TopBar() {
       </ToggleGroup>
 
       <Button variant="outline" className="hidden h-8 gap-2 rounded-lg px-2.5 font-normal text-muted-foreground md:inline-flex" onClick={() => setSearchOpen(true)}>
-        <Search className="size-3.5" />
+        <Icon name="search" size={18} />
         Search
-        <kbd className="font-mono text-[11px]">⌘K</kbd>
+        <kbd className="font-mono text-[12.5px]">⌘K</kbd>
       </Button>
     </header>
   )

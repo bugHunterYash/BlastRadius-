@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
 import { AnimatePresence, motion } from "motion/react"
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { useTower } from "./tower-store"
@@ -49,9 +49,9 @@ export function DetailsDrawer() {
               <button
                 type="button"
                 onClick={back}
-                className="-mt-6 -mb-4 -ml-1.5 inline-flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="-mt-6 -mb-4 -ml-1.5 inline-flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1 text-[14.5px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <ArrowLeft className="size-3.5" />
+                <Icon name="arrow_back" size={18} />
                 Back
               </button>
             )}

@@ -1,6 +1,6 @@
 "use client"
 
-import { Sparkles } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { isOpen, latestVersion } from "@/lib/graph"
@@ -146,13 +146,13 @@ export function AgentView({ id }: { id: string }) {
           {AGENT_ROLES[id]} In run-42 it made {mine.length} memory {mine.length === 1 ? "call" : "calls"}
           {open.length > 0 && (
             <>
-              , and <b className="font-medium text-foreground">{open.length} {open.length === 1 ? "needs" : "need"} your review</b>
+              , and <b className="font-semibold text-foreground">{open.length} {open.length === 1 ? "needs" : "need"} your review</b>
             </>
           )}
           .
         </Para>
       </header>
-      <dl className="grid grid-cols-[90px_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-sm">
+      <dl className="grid grid-cols-[90px_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-[15px]">
         <dt className="text-muted-foreground">Can read</dt>
         <dd>{perms.read.join(", ")}</dd>
         <dt className="text-muted-foreground">Can write</dt>
@@ -260,7 +260,7 @@ export function IssueView({ id }: { id: string }) {
         </Kicker>
         <Title>{issue.headline}</Title>
         <Para>{issue.story}</Para>
-        <div className="mt-3 flex gap-3 text-[13px]">
+        <div className="mt-3 flex gap-3 text-[14.5px]">
           <button type="button" className="text-ink-2 underline decoration-border underline-offset-4 hover:text-foreground" onClick={() => go("agent", issue.agent)}>
             {cap(issue.agent)}
           </button>
@@ -276,14 +276,14 @@ export function IssueView({ id }: { id: string }) {
       </Section>
       <Section title="Suggested fix">
         {!fix ? (
-          <div className="flex items-center gap-2.5 rounded-xl bg-muted px-4 py-3.5 text-sm text-muted-foreground">
-            <Sparkles className="size-4 animate-pulse text-cobalt" />
+          <div className="flex items-center gap-2.5 rounded-xl bg-muted px-4 py-3.5 text-[15px] text-muted-foreground">
+            <Icon name="auto_awesome" size={20} className="animate-pulse text-cobalt" />
             Claude is drafting a fix
           </div>
         ) : (
           <>
-            <p className="text-[14.5px] leading-relaxed text-ink-2">{fix.explanation}</p>
-            <div className="mt-3.5 overflow-hidden rounded-xl border text-[13px]">
+            <p className="text-[16px] leading-relaxed text-ink-2">{fix.explanation}</p>
+            <div className="mt-3.5 overflow-hidden rounded-xl border text-[14.5px]">
               <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-2 px-4 py-3">
                 <span className="text-muted-foreground">Before</span>
                 <code className="font-mono text-muted-foreground line-through decoration-border">{fix.before}</code>
@@ -312,7 +312,7 @@ export function IssueView({ id }: { id: string }) {
         </div>
       )}
       {(issue.status === "approved" || issue.status === "rejected") && (
-        <div className={cn("flex items-center gap-2.5 rounded-xl px-4 py-3.5 text-sm", issue.status === "approved" ? "bg-mint/10 text-mint" : "bg-muted text-ink-2")}>
+        <div className={cn("flex items-center gap-2.5 rounded-xl px-4 py-3.5 text-[15px]", issue.status === "approved" ? "bg-mint/10 text-mint" : "bg-muted text-ink-2")}>
           <span className={cn("size-2 rounded-full", issue.status === "approved" ? "bg-mint" : "bg-muted-foreground")} />
           {issue.status === "approved" ? `Approved. ${fix?.target_agent}.yaml is updated and the decision is saved to Meko.` : "Dismissed. Claude keeps it as an example."}
         </div>
@@ -337,7 +337,7 @@ export function TraceView({ id }: { id: string }) {
           {cap(t.root.agent)} saved this value at {clock(t.root.ts)}. It reached {agents} agents and {outputs} outputs
           {t.hops.has("published") ? (
             <>
-              , ending in <b className="font-medium text-foreground">the published post</b>.
+              , ending in <b className="font-semibold text-foreground">the published post</b>.
             </>
           ) : (
             "."
@@ -359,7 +359,7 @@ export function TraceView({ id }: { id: string }) {
               <Row
                 key={`${s.node}-${s.hop}`}
                 onClick={() => go(isAgent ? "agent" : "fact", s.node)}
-                lead={<span className="grid size-5 shrink-0 place-items-center rounded-full bg-cobalt-soft font-mono text-[10.5px] text-cobalt">{s.hop}</span>}
+                lead={<span className="grid size-5 shrink-0 place-items-center rounded-full bg-cobalt-soft font-mono text-[12px] text-cobalt">{s.hop}</span>}
                 trail={<Meta>{clock(s.event.ts)}</Meta>}
               >
                 {s.hop === 0 ? `${s.node} v${s.event.version} is saved` : isAgent ? `${cap(s.node)} reads it` : `${s.node} is written from it`}

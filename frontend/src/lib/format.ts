@@ -2,6 +2,9 @@ import type { FixType, IssueType, MemoryEvent } from "./types"
 
 export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
+/** Each agent's colour, used for its node, its avatar and its bars in the activity strip. */
+export const agentColor = (agent: string) => `var(--agent-${agent}, var(--cobalt))`
+
 /** "2026-10-31T17:04:03Z" → "17:04" (or "17:04:03" with seconds) */
 export const clock = (ts: string, seconds = false) => ts.slice(11, seconds ? 19 : 16)
 

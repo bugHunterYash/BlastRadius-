@@ -1,14 +1,15 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowUp, CircleAlert, Database, X } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
 import { AnimatePresence, motion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { isOpen } from "@/lib/graph"
-import { cap, clock, ISSUE_LABEL } from "@/lib/format"
+import { agentColor, cap, clock, ISSUE_LABEL } from "@/lib/format"
 import { EVENTS, RUNS } from "@/lib/sample-data"
 import type { CallKind, Issue, MekoCall } from "@/lib/types"
+import { AgentGlyph } from "./agent-glyph"
 import { seenIssues, useTower } from "./tower-store"
 
 const VERB: Record<CallKind, string> = {
@@ -52,10 +53,10 @@ export function SharedChat() {
         <div className="mx-auto w-full max-w-[740px] px-5 pt-10 pb-8 sm:px-8">
           <RunHeader />
           {agent && (
-            <div className="sticky top-3 z-10 mt-6 flex w-fit items-center gap-2 rounded-full border bg-popover py-1 pr-1 pl-3.5 text-[13px] shadow-sm">
+            <div className="sticky top-3 z-10 mt-6 flex w-fit items-center gap-2 rounded-full border bg-popover py-1 pr-1 pl-3.5 text-[14.5px] shadow-sm">
               Showing {cap(agent)}’s messages
               <Button variant="ghost" size="icon-xs" className="rounded-full" aria-label="Show all messages" onClick={() => setChatAgent(null)}>
-                <X />
+                <Icon name="close" size={16} />
               </Button>
             </div>
           )}
@@ -83,14 +84,16 @@ export function SharedChat() {
 function AgentTurn({ call: c, grouped, issue, speaking }: { call: MekoCall; grouped: boolean; issue?: Issue; speaking: boolean }) {
   const { state, go, setHighlight } = useTower()
   const lit = !!c.event_id && state.highlight === c.event_id
+  const event = c.event_id ? EVENTS.find((e) => e.event_id === c.event_id) : undefined
+  const fact = event?.fact_key ? event : undefined
   return (
     <div className="flex gap-3.5">
-      {grouped ? <span className="w-7 shrink-0" /> : <AgentMark name={c.actor} speaking={speaking} />}
+      {grouped ? <span className="w-[30px] shrink-0" /> : <AgentMark name={c.actor} speaking={speaking} />}
       <div className="min-w-0 flex-1">
         {!grouped && (
           <div className="mb-1 flex items-baseline gap-2">
-            <span className="text-[14px] font-medium">{cap(c.actor)}</span>
-            <span className="text-xs text-muted-foreground">{clock(c.ts, true)}</span>
+            <span className="text-[15.5px] font-bold" style={{ color: agentColor(c.actor) }}>{cap(c.actor)}</span>
+            <span className="text-[13px] text-muted-foreground">{clock(c.ts, true)}</span>
           </div>
         )}
         <button
@@ -99,24 +102,23 @@ function AgentTurn({ call: c, grouped, issue, speaking }: { call: MekoCall; grou
           className={cn("-mx-2 block w-[calc(100%+1rem)] rounded-lg px-2 py-1 text-left transition-colors hover:bg-muted/60", lit && "bg-cobalt-soft hover:bg-cobalt-soft")}
           aria-pressed={lit}
         >
-          <span className="block text-[15px] leading-[1.6] text-foreground">{c.text}</span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-            <KindDot kind={c.kind} />
-            {VERB[c.kind]}
-            {c.to && <span className="text-ink-2">{cap(c.to)}</span>}
+          <span className="block text-[16.5px] leading-[1.6] text-foreground">{c.text}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted-foreground">
+            <span className={cn("font-bold", KIND_TEXT[c.kind])}>{VERB[c.kind]}</span>
+            {fact ? <MemoryChip fact={fact.fact_key!} version={fact.version!} write={fact.op === "write"} /> : c.to && <AgentChip agent={c.to} />}
             <span aria-hidden>·</span>
-            <span className="font-mono text-[11px]">{c.datapack}</span>
+            <span className="font-mono text-[12.5px]">{c.datapack}</span>
           </span>
         </button>
         {issue && isOpen(issue) && (
-          <div className="mt-3 overflow-hidden rounded-xl border bg-card">
-            <div className="flex items-center gap-2 border-b px-4 py-2 text-xs font-medium text-flag">
-              <CircleAlert className="size-3.5" />
+          <div className="mt-3 overflow-hidden rounded-xl border border-flag/30 bg-flag-soft/60">
+            <div className="flex items-center gap-2 border-b border-flag/20 px-4 py-2 text-[13.5px] font-bold text-flag">
+              <Icon name="error" size={18} />
               {ISSUE_LABEL[issue.type]} detected
             </div>
             <div className="flex items-center gap-3 px-4 py-3">
-              <p className="min-w-0 flex-1 text-[13.5px] leading-snug text-ink-2">{issue.story}</p>
-              <Button size="sm" variant="secondary" className="shrink-0 rounded-lg" onClick={() => go("issue", issue.issue_id)}>
+              <p className="min-w-0 flex-1 text-[15px] leading-snug text-ink-2">{issue.story}</p>
+              <Button size="sm" className="h-8 shrink-0 rounded-lg bg-flag px-3 font-bold text-white hover:bg-flag/90" onClick={() => go("issue", issue.issue_id)}>
                 Review
               </Button>
             </div>
@@ -130,12 +132,11 @@ function AgentTurn({ call: c, grouped, issue, speaking }: { call: MekoCall; grou
 function PersonTurn({ call: c }: { call: MekoCall }) {
   return (
     <div className="flex flex-col items-end">
-      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-cobalt px-4 py-2.5 text-[15px] leading-[1.55] text-white">{c.text}</div>
-      <div className="mt-1.5 flex items-center gap-1.5 pr-1 text-xs text-muted-foreground">
-        <KindDot kind={c.kind} />
-        You {VERB[c.kind]}
+      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-cobalt px-4 py-2.5 text-[16.5px] leading-[1.55] text-white">{c.text}</div>
+      <div className="mt-1.5 flex items-center gap-1.5 pr-1 text-[13px] text-muted-foreground">
+        You <span className={cn("font-bold", KIND_TEXT[c.kind])}>{VERB[c.kind]}</span>
         <span aria-hidden>·</span>
-        <span className="font-mono text-[11px]">{c.datapack}</span>
+        <span className="font-mono text-[12.5px]">{c.datapack}</span>
         <span aria-hidden>·</span>
         {clock(c.ts)}
       </div>
@@ -151,14 +152,14 @@ function RunHeader() {
   const open = seenIssues(state).filter(isOpen)
   return (
     <header>
-      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+      <div className="flex items-center gap-2 text-[14.5px] text-muted-foreground">
         <span className={cn("size-1.5 rounded-full", ended ? "bg-mint" : "animate-pulse bg-flag")} />
         {ended ? "Run ended" : "Live"} · {run.run_id} · {run.datapack}
       </div>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={ended ? "digest" : "live"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-          <h1 className="mt-3 text-[28px] leading-[1.15] font-semibold tracking-[-0.025em] text-balance">{ended ? run.headline : "Four agents, one shared memory"}</h1>
-          <p className="mt-3 max-w-[62ch] text-[15px] leading-[1.65] text-ink-2">
+          <h1 className="mt-3 text-[30px] leading-[1.15] font-bold tracking-[-0.025em] text-balance">{ended ? run.headline : "Four agents, one shared memory"}</h1>
+          <p className="mt-3 max-w-[62ch] text-[16.5px] leading-[1.65] text-ink-2">
             {ended ? run.summary : "Every message here is a Meko call: what an agent wrote, recalled or handed off. Problems are flagged the moment they happen."}
           </p>
         </motion.div>
@@ -174,7 +175,7 @@ function RunHeader() {
                 initial={{ opacity: 0, scale: 0.92 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={() => go("issue", i.issue_id)}
-                className="inline-flex h-8 items-center gap-2 rounded-full border bg-card px-3.5 text-[13px] transition-colors hover:bg-muted"
+                className="inline-flex h-8 items-center gap-2 rounded-full border bg-card px-3.5 text-[14.5px] transition-colors hover:bg-muted"
               >
                 <span className="size-1.5 rounded-full bg-flag" />
                 {i.headline}
@@ -230,16 +231,15 @@ function Composer() {
             }
           }}
           placeholder="Write to the shared memory…"
-          className="block max-h-40 w-full resize-none bg-transparent px-1.5 pt-1 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
+          className="block max-h-40 w-full resize-none bg-transparent px-1.5 pt-1 text-[16.5px] leading-relaxed outline-none placeholder:text-muted-foreground"
         />
         <div className="mt-2 flex items-center gap-2">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs text-muted-foreground">
-            <Database className="size-3" />
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[13px] text-muted-foreground">
             content-team
           </span>
-          <span className="hidden text-xs text-muted-foreground sm:inline">Every agent recalls this on its next step</span>
+          <span className="hidden text-[13px] text-muted-foreground sm:inline">Every agent recalls this on its next step</span>
           <Button type="submit" size="icon" className="ml-auto size-8 rounded-lg bg-cobalt text-white hover:bg-cobalt/90" disabled={!draft.trim()} aria-label="Send">
-            <ArrowUp className="size-4" />
+            <Icon name="arrow_upward" size={20} />
           </Button>
         </div>
       </div>
@@ -251,7 +251,7 @@ function Working() {
   const next = EVENTS[useTower().state.replayN]
   if (!next) return null
   return (
-    <div className="mt-6 flex items-center gap-3.5 text-[13.5px] text-muted-foreground">
+    <div className="mt-6 flex items-center gap-3.5 text-[15px] text-muted-foreground">
       <span className="grid size-7 place-items-center">
         <span className="flex gap-1">
           {[0, 1, 2].map((d) => (
@@ -267,22 +267,38 @@ function Working() {
 function AgentMark({ name, speaking }: { name: string; speaking: boolean }) {
   return (
     <span className="relative mt-0.5 shrink-0" aria-hidden>
-      {/* same round cobalt mark as the agent's node on the graph */}
-      {speaking && <span className="absolute inset-0 rounded-full border border-cobalt/60 [animation:pulse-ring_1.6s_ease-out_infinite]" />}
-      <span className="relative grid size-7 place-items-center rounded-full bg-cobalt text-[11.5px] font-semibold text-white">{name.charAt(0).toUpperCase()}</span>
+      {/* the agent's icon in its colour code, the same mark as its node on the graph */}
+      {speaking && <span className="absolute -inset-1 rounded-[30%] border [animation:pulse-ring_1.6s_ease-out_infinite]" style={{ borderColor: agentColor(name) }} />}
+      <AgentGlyph agent={name} size={30} className="relative" />
     </span>
   )
 }
 
-const KIND_DOT: Record<CallKind, string> = {
-  note: "bg-cobalt",
-  recall: "border border-cobalt bg-transparent",
-  directive: "bg-muted-foreground",
-  promotion: "bg-mint",
-  approval: "bg-foreground",
-  error: "bg-destructive",
+/** The memory a call touched, as a small token: solid for a write, outlined for a read. */
+function MemoryChip({ fact, version, write }: { fact: string; version: number; write: boolean }) {
+  return (
+    <span className={cn("inline-flex h-5 items-center gap-1 rounded-md px-1.5 font-mono text-[12.5px]", write ? "bg-ink text-paper" : "border border-ink/25 text-ink")}>
+      {fact}
+      <span className="opacity-60">v{version}</span>
+    </span>
+  )
 }
 
-function KindDot({ kind }: { kind: CallKind }) {
-  return <span className={cn("inline-block size-1.5 rounded-full", KIND_DOT[kind])} />
+function AgentChip({ agent }: { agent: string }) {
+  return (
+    <span className="inline-flex h-5 items-center gap-1.5 rounded-md border px-1.5 text-[12.5px] text-ink-2">
+      <span className="size-1.5 rounded-full" style={{ background: agentColor(agent) }} />
+      {cap(agent)}
+    </span>
+  )
+}
+
+/** The verb of each call, coloured by kind so a scan of the chat shows writes, reads and decisions apart. */
+const KIND_TEXT: Record<CallKind, string> = {
+  note: "text-primary",
+  recall: "text-[var(--agent-researcher)]",
+  directive: "text-[var(--agent-reviewer)]",
+  promotion: "text-[var(--agent-writer)]",
+  approval: "text-foreground",
+  error: "text-destructive",
 }

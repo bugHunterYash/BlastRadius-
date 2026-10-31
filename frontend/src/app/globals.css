@@ -19,6 +19,8 @@
   --color-flag-soft: var(--flag-soft);
   --color-mint: var(--mint);
   --color-ink-2: var(--ink-2);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -57,46 +59,58 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Light theme. A calm green-tinted grey page with white cards on top; emerald is the one action
+   and memory colour; every agent has its own colour code; red means a problem and nothing else. */
 :root {
-  --background: #f7f7f5;
-  --foreground: #111214;
-  --ink-2: #4d5058;
+  --background: #f3f6f4;
+  --foreground: #0b1711;
+  --ink-2: #334139;
   --card: #ffffff;
-  --card-foreground: #111214;
+  --card-foreground: #12201a;
   --popover: #ffffff;
-  --popover-foreground: #111214;
-  --primary: #2443dc;
+  --popover-foreground: #12201a;
+  --primary: #059669;
   --primary-foreground: #ffffff;
-  --secondary: #f0efec;
-  --secondary-foreground: #111214;
-  --muted: #f0efec;
-  --muted-foreground: #8b8d94;
-  --accent: #f0efec;
-  --accent-foreground: #111214;
-  --destructive: #d8432a;
-  --border: #e8e7e3;
-  --input: #e2e1dc;
-  --ring: #2443dc;
-  --cobalt: #2443dc;
-  --cobalt-soft: #e9edfd;
-  --flag: #e2582c;
-  --flag-soft: #fcece6;
-  --mint: #23966a;
-  --dots: #d9d8d3;
-  --chart-1: #2443dc;
-  --chart-2: #e2582c;
-  --chart-3: #8b8d94;
-  --chart-4: #4d5058;
-  --chart-5: #111214;
-  --radius: 0.625rem;
-  --sidebar: #f7f7f5;
-  --sidebar-foreground: #111214;
-  --sidebar-primary: #2443dc;
+  --secondary: #ebf0ec;
+  --secondary-foreground: #12201a;
+  --muted: #edf2ee;
+  --muted-foreground: #64746b;
+  --accent: #ebf0ec;
+  --accent-foreground: #12201a;
+  --destructive: #ef4444;
+  --border: #e1e8e3;
+  --input: #d9e1db;
+  --ring: #10b981;
+  /* "cobalt" is the app's accent token; in this theme it is the emerald */
+  --cobalt: #059669;
+  --cobalt-soft: #d1fae5;
+  --flag: #ef4444;
+  --flag-soft: #fee2e2;
+  --mint: #059669;
+  --dots: #d3dbd6;
+  --paper: #fbfcfb;
+  --ink: #2b3a33;
+  /* colour code per agent: always the same hue on the graph, in the chat and in the activity strip */
+  --agent-researcher: #2563eb;
+  --agent-writer: #9333ea;
+  --agent-reviewer: #f97316;
+  --agent-publisher: #0891b2;
+  --agent-you: #12201a;
+  --ripple: #ef4444;
+  --chart-1: #059669;
+  --chart-2: #e5484d;
+  --chart-3: #7b8a82;
+  --chart-4: #4a5a52;
+  --chart-5: #12201a;
+  --radius: 0.75rem;
+  --sidebar: #f3f6f4;
+  --sidebar-foreground: #12201a;
+  --sidebar-primary: #059669;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #efeeea;
-  --sidebar-accent-foreground: #111214;
-  --sidebar-border: #e8e7e3;
-  --sidebar-ring: #2443dc;
+  --sidebar-accent: #e7eee9;
+  --sidebar-accent-foreground: #12201a;
+  --sidebar-border: #e1e8e3;
+  --sidebar-ring: #10b981;
 }
 
 /* dark mode: cool blue graphite, so cobalt stays the one accent and nothing reads as warm charcoal */
@@ -126,6 +140,14 @@
   --flag-soft: #2d1d18;
   --mint: #4fd1a0;
   --dots: #222838;
+  --paper: #11141b;
+  --ink: #d9dce6;
+  --agent-researcher: #4fc1b2;
+  --agent-writer: #d084c1;
+  --agent-reviewer: #e2b45a;
+  --agent-publisher: #7f97ff;
+  --agent-you: #e8ebf2;
+  --ripple: #ff6a52;
   --chart-1: #6f86ff;
   --chart-2: #f0795a;
   --chart-3: #6f7789;
@@ -147,6 +169,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* a heavier base weight so everything reads bold and clear */
+    font-weight: 500;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -154,6 +178,23 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* in a layer, so utility classes like `hidden` still win */
+@layer components {
+  .material-symbols-rounded {
+    font-family: "Material Symbols Rounded";
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -216,4 +257,9 @@
 }
 .tower .react-flow__attribution a {
   color: inherit;
+}
+
+/* the "Memory names" toggle on the graph */
+.hide-labels .fact-label {
+  display: none;
 }
