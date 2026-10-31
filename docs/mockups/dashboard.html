@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BlastRadius Dashboard Prototype</title>
+<style>
+  :root {
+    --bg: #0B0E14; --panel: #121722; --panel2: #171D2A; --line: #242B3A;
+    --text: #E6E8EB; --muted: #8A8F98; --accent: #E8743B;
+    --ok: #3FB950; --warn: #D29922; --bad: #F85149; --info: #58A6FF; --recover: #2EA0A0;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1600px; height: 1000px; background: var(--bg); color: var(--text);
+         font: 13px/1.4 "Segoe UI", system-ui, sans-serif; display: grid;
+         grid-template-columns: 64px 1fr 372px; grid-template-rows: 56px 1fr; overflow: hidden; }
+  .mono { font-family: var(--mono); }
+  .muted { color: var(--muted); }
+
+  /* sidebar */
+  .side { grid-row: 1 / 3; background: #0E121A; border-right: 1px solid var(--line);
+          display: flex; flex-direction: column; align-items: center; padding-top: 14px; gap: 6px; }
+  .logo { width: 36px; height: 36px; border-radius: 9px; background: var(--accent); color: #fff;
+          display: grid; place-items: center; font-weight: 800; font-size: 18px; margin-bottom: 14px; }
+  .nav { width: 48px; padding: 7px 0; border-radius: 8px; text-align: center; color: var(--muted); font-size: 10px; }
+  .nav b { display: block; font-size: 17px; font-weight: 400; }
+  .nav.on { background: var(--panel2); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+
+  /* top bar */
+  .top { grid-column: 2 / 4; display: flex; align-items: center; gap: 16px; padding: 0 20px;
+         border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 700; font-size: 15px; }
+  .brand span { color: var(--accent); }
+  .crumb { color: var(--muted); }
+  .crumb b { color: var(--text); font-weight: 600; }
+  .grow { flex: 1; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+          border: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
+  .btn { padding: 7px 14px; border-radius: 8px; font-weight: 600; border: 1px solid var(--line); background: var(--panel2); }
+  .btn.ai { border-color: #6b3a22; color: #ffb48a; background: #2a1810; }
+
+  /* main */
+  .main { padding: 16px; display: grid; gap: 12px; grid-template-rows: auto auto 1fr 250px; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .hdr { display: flex; align-items: stretch; }
+  .hdr > div { padding: 12px 18px; border-right: 1px solid var(--line); }
+  .hdr .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .hdr .v { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  .stop { margin: auto 16px auto auto; background: #3a1414; border: 1px solid #7a2626; color: #ff9b95;
+          padding: 9px 16px; border-radius: 8px; font-weight: 700; }
+
+  .phase { padding: 10px 16px; }
+  .bar { position: relative; display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin-top: 6px; font-size: 11px; font-weight: 600; }
+  .bar div { display: flex; align-items: center; padding-left: 8px; }
+  .marker { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #fff; box-shadow: 0 0 6px #fff; }
+
+  .mid { display: grid; grid-template-columns: 440px 1fr; gap: 12px; min-height: 0; }
+  .ptitle { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;
+            border-bottom: 1px solid var(--line); font-weight: 600; }
+  .legend { display: flex; gap: 12px; padding: 8px 14px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
+
+  .node rect { fill: var(--panel2); stroke: var(--line); stroke-width: 1.5; }
+  .node text { fill: var(--text); font: 600 13px "Segoe UI", sans-serif; }
+  .node .s { font: 600 11px "Segoe UI", sans-serif; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; padding: 7px 12px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 12px; border-bottom: 1px solid #1b2130; white-space: nowrap; }
+  .tag { padding: 2px 7px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+
+  /* agent */
+  .agent { background: #0F131C; border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .agent .ptitle { padding: 12px 16px; }
+  .chat { flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; font-size: 12.5px; }
+  .u { align-self: flex-end; background: #233049; padding: 8px 12px; border-radius: 12px 12px 2px 12px; max-width: 85%; }
+  .tool { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .tool b { color: var(--info); font-weight: 400; }
+  .a { background: var(--panel); border: 1px solid var(--line); padding: 10px 12px; border-radius: 12px 12px 12px 2px; }
+  .chip { display: inline-block; padding: 0 6px; border-radius: 4px; background: #1d2b44; color: var(--info);
+          font: 600 11px var(--mono); }
+  .plan { border: 1px solid #6b3a22; background: #1a130f; border-radius: 10px; padding: 10px 12px; }
+  .plan h4 { font-size: 12px; color: #ffb48a; margin-bottom: 6px; }
+  .plan .row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin: 8px 0; font-size: 11px; }
+  .checks span::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+  .input { margin: 12px 16px 16px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+           color: var(--muted); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<nav class="side">
+  <div class="logo">◆</div>
+  <div class="nav"><b>◎</b>Graph</div>
+  <div class="nav on"><b>⚡</b>Faults</div>
+  <div class="nav"><b>▤</b>Capacity</div>
+  <div class="nav"><b>⇄</b>Compare</div>
+  <div class="nav"><b>⟲</b>History</div>
+</nav>
+
+<header class="top">
+  <div class="brand">Blast<span>Radius</span></div>
+  <div class="crumb">Experiments / <b>exp_7f3c</b> · Redis stop under load</div>
+  <div class="grow"></div>
+  <span class="pill muted">▣ demo-shop · docker compose · 5 services</span>
+  <span class="pill"><span style="color:var(--ok)">●</span> API 127.0.0.1:8000</span>
+  <span class="btn ai">✦ Ask agent</span>
+</header>
+
+<main class="main">
+  <section class="card hdr">
+    <div><div class="k">Fault target</div><div class="v">redis <span class="muted" style="font-weight:400">· stop</span></div></div>
+    <div><div class="k">Load</div><div class="v">1× <span class="muted" style="font-weight:400">· 20 rps target</span></div></div>
+    <div><div class="k">Phase</div><div class="v" style="color:var(--recover)">↻ RECOVERY <span class="mono" style="color:var(--text)">01:15</span><span class="muted mono" style="font-weight:400"> / 02:00</span></div></div>
+    <div><div class="k">SLO</div><div class="v" style="color:var(--bad)">✕ Breached <span class="muted" style="font-weight:400">· p95, errors</span></div></div>
+    <div style="border:0"><div class="k">Data source</div><div class="v"><span class="tag" style="background:#12301a;color:var(--ok)">● LIVE</span></div></div>
+    <span class="stop">■ Stop &amp; restore</span>
+  </section>
+
+  <section class="card phase">
+    <div style="display:flex;justify-content:space-between" class="muted"><span>Phase timeline</span><span class="mono">0s ─ 120s</span></div>
+    <div class="bar">
+      <div style="width:25%;background:#16233a;color:var(--info)">● Baseline · 30s</div>
+      <div style="width:25%;background:#3a1717;color:#ff9b95">⚡ Fault: redis stopped · 30s</div>
+      <div style="width:50%;background:#10302f;color:#6fd6d6">↻ Recovery · 60s</div>
+      <span class="marker" style="left:62.5%"></span>
+    </div>
+  </section>
+
+  <section class="mid">
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="ptitle"><span>Architecture · live impact</span><span class="muted" style="font-weight:400;font-size:12px">from docker-compose.yml</span></div>
+      <svg viewBox="0 0 440 330" style="flex:1">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4a5366"/></marker>
+          <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#F85149"/></marker>
+        </defs>
+        <!-- edges -->
+        <path d="M220 72 L220 120" stroke="#4a5366" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+        <path d="M200 176 L110 238" stroke="#F85149" stroke-width="2.5" fill="none" marker-end="url(#ahr)"/>
+        <text x="120" y="200" fill="#F85149" font-size="10.5" font-weight="700">verified</text>
+        <path d="M240 176 L330 238" stroke="#4a5366" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#ah)"/>
+        <text x="296" y="200" fill="#8A8F98" font-size="10.5">declared</text>
+        <path d="M372 112 L130 250" stroke="#4a5366" stroke-width="1.5" stroke-dasharray="2 4" fill="none" marker-end="url(#ah)"/>
+        <text x="300" y="168" fill="#8A8F98" font-size="10.5">inferred</text>
+
+        <g class="node"><rect x="150" y="18" width="140" height="54" rx="10"/>
+          <text x="166" y="40">web</text><text x="166" y="60" class="s" fill="#8A8F98">◌ no evidence yet</text></g>
+        <g class="node"><rect x="140" y="122" width="160" height="54" rx="10" style="stroke:#D29922"/>
+          <text x="156" y="144">api</text><text x="156" y="164" class="s" fill="#D29922">▲ impact observed [E1]</text></g>
+        <g class="node"><rect x="320" y="60" width="104" height="54" rx="10"/>
+          <text x="336" y="82">worker</text><text x="336" y="102" class="s" fill="#8A8F98">◌ unverified</text></g>
+        <g class="node"><rect x="18" y="240" width="168" height="58" rx="10" style="stroke:#F85149;stroke-width:2"/>
+          <text x="34" y="263">redis</text><text x="34" y="284" class="s" fill="#2EA0A0">↻ restored · recovering</text></g>
+        <g class="node"><rect x="262" y="240" width="160" height="58" rx="10" style="stroke:#3FB950"/>
+          <text x="278" y="263">postgres</text><text x="278" y="284" class="s" fill="#3FB950">✓ no impact measured</text></g>
+      </svg>
+      <div class="legend"><span>━ verified</span><span>╍ declared</span><span>┈ inferred</span><span style="color:var(--warn)">▲ impact</span><span style="color:var(--bad)">⚡ fault</span></div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="ptitle"><span>Live metrics · 1s buckets</span><span class="muted" style="font-weight:400;font-size:12px">k6 open model (ramping-arrival-rate)</span></div>
+      <div id="charts" style="flex:1;padding:4px 10px 6px"></div>
+    </div>
+  </section>
+
+  <section class="card" style="overflow:hidden">
+    <div class="ptitle"><span>Evidence · statistically tested (p &lt; 0.01 and min effect size)</span><span class="muted" style="font-weight:400;font-size:12px">baseline window vs fault window</span></div>
+    <table>
+      <tr><th>#</th><th>Service</th><th>Endpoint</th><th>Signal</th><th>Baseline</th><th>Fault</th><th>n</th><th>Test</th><th>Verdict</th></tr>
+      <tr><td class="mono">E1</td><td>api</td><td class="mono">GET /api/cart</td><td>error rate</td><td class="mono">0.2%</td><td class="mono" style="color:var(--bad)">91.0%</td><td class="mono">412</td><td class="mono">z-test p&lt;0.001</td><td><span class="tag" style="background:#3a1717;color:#ff9b95">▲ impact verified</span></td></tr>
+      <tr><td class="mono">E2</td><td>api</td><td class="mono">GET /api/cart</td><td>p95 latency</td><td class="mono">82 ms</td><td class="mono" style="color:var(--bad)">870 ms</td><td class="mono">412</td><td class="mono">Mann-Whitney p&lt;0.001</td><td><span class="tag" style="background:#3a1717;color:#ff9b95">▲ impact verified</span></td></tr>
+      <tr><td class="mono">E3</td><td>api</td><td class="mono">POST /api/checkout</td><td>error rate</td><td class="mono">0.1%</td><td class="mono" style="color:var(--warn)">34.5%</td><td class="mono">198</td><td class="mono">z-test p&lt;0.001</td><td><span class="tag" style="background:#3a2a10;color:#e6b450">▲ impact verified</span></td></tr>
+      <tr><td class="mono">E4</td><td>api</td><td class="mono">GET /api/products</td><td>p95 latency</td><td class="mono">75 ms</td><td class="mono">79 ms</td><td class="mono">405</td><td class="mono">Mann-Whitney p=0.41</td><td><span class="tag" style="background:#1a2a1d;color:var(--ok)">✓ no significant change</span></td></tr>
+      <tr><td class="mono">R</td><td>redis</td><td class="mono">—</td><td>recovery</td><td colspan="4" class="muted">waiting for 5s of stable SLO-compliant buckets…</td><td><span class="tag" style="background:#10302f;color:#6fd6d6">↻ measuring</span></td></tr>
+    </table>
+  </section>
+</main>
+
+<aside class="agent">
+  <div class="ptitle"><span>✦ BlastRadius agent</span><span class="muted" style="font-weight:400;font-size:11px">Gemini · 9 tools · confirm-gated</span></div>
+  <div class="chat">
+    <div class="u">Redis mar gaya to kya hoga?</div>
+    <div class="tool">⏺ <b>get_architecture</b>()<br>&nbsp;&nbsp;⎿ 5 services, 5 edges</div>
+    <div class="tool">⏺ <b>predict_impact</b>(target="redis")<br>&nbsp;&nbsp;⎿ api (declared), worker (inferred)</div>
+    <div class="a">Config ke hisaab se <b>api</b> aur <b>worker</b> Redis par depend karte hain <span class="chip">G</span>. Yeh abhi <i>predicted</i> hai, verified nahi. Isse test karne ka plan:</div>
+    <div class="plan">
+      <h4>⚡ PLAN · fault experiment</h4>
+      <div class="row"><span class="muted">Fault</span><span>stop <b>redis</b></span></div>
+      <div class="row"><span class="muted">Load</span><span>20 rps · 3 endpoints</span></div>
+      <div class="row"><span class="muted">Phases</span><span>30s base · 30s fault · 60s recovery</span></div>
+      <div class="row"><span class="muted">SLO</span><span>p95 &lt; 500 ms · errors &lt; 1%</span></div>
+      <div class="checks"><span>labels: env=test</span><span>fault-allowed</span><span>not production</span><span>allowlisted host</span><span>caps ok</span><span>no run lock</span><span>docker reachable</span><span>k6 present</span><span>restore ready</span></div>
+      <div style="color:var(--ok);font-weight:700;font-size:12px">✓ Confirmed by you · running exp_7f3c</div>
+    </div>
+    <div class="tool">⏺ <b>get_evidence</b>(exp="7f3c")<br>&nbsp;&nbsp;⎿ 4 evidence rows</div>
+    <div class="a">Haan, Redis girne par <b>/api/cart</b> ka error rate 0.2% → 91.0% gaya <span class="chip">E1</span> aur p95 82 → 870 ms <span class="chip">E2</span>. Checkout bhi affected <span class="chip">E3</span>. <b>/api/products</b> par koi significant asar nahi <span class="chip">E4</span>. Fix prompt banaun?</div>
+  </div>
+  <div class="input"><span>Ask about your architecture…</span><span>⏎</span></div>
+</aside>
+
+<script>
+  // Example data for the prototype only: t = 0..75s of a 120s run.
+  const NOW = 75, T = 120;
+  const n = (t, k) => Math.sin(t * 1.7 + k) * 0.5 + Math.sin(t * 0.37 + k * 2) * 0.5;
+  const ramp = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+  const ts = [...Array(NOW + 1).keys()];
+  const fault = t => ramp(t, 30, 32) * (1 - ramp(t, 60, 68));
+  const S = {
+    target: ts.map(() => 20),
+    rps: ts.map(t => 20 + n(t, 1) * 0.8 - fault(t) * 0.6),
+    p50: ts.map(t => 38 + n(t, 2) * 4 + fault(t) * 380),
+    p95: ts.map(t => 82 + n(t, 3) * 8 + fault(t) * 790),
+    p99: ts.map(t => 120 + n(t, 4) * 14 + fault(t) * 960),
+    err: ts.map(t => 0.2 + Math.abs(n(t, 5)) * 0.2 + fault(t) * (90 + n(t, 6) * 2)),
+  };
+  const W = 660, H = 142, L = 46, R = 12, TP = 22, B = 18;
+  const x = t => L + (t / T) * (W - L - R);
+  function chart(title, max, unit, series, slo) {
+    const y = v => TP + (1 - v / max) * (H - TP - B);
+    let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">`;
+    s += `<rect x="${x(0)}" y="${TP}" width="${x(30) - x(0)}" height="${H - TP - B}" fill="#58A6FF" opacity=".05"/>`;
+    s += `<rect x="${x(30)}" y="${TP}" width="${x(60) - x(30)}" height="${H - TP - B}" fill="#F85149" opacity=".09"/>`;
+    s += `<rect x="${x(60)}" y="${TP}" width="${x(120) - x(60)}" height="${H - TP - B}" fill="#2EA0A0" opacity=".06"/>`;
+    for (const f of [0, .5, 1]) {
+      s += `<line x1="${L}" x2="${W - R}" y1="${y(max * f)}" y2="${y(max * f)}" stroke="#242B3A"/>`;
+      s += `<text x="${L - 6}" y="${y(max * f) + 4}" fill="#8A8F98" font-size="11" text-anchor="end" font-family="Consolas">${max * f}${unit}</text>`;
+    }
+    for (const t of [0, 30, 60, 90, 120]) s += `<text x="${x(t)}" y="${H - 3}" fill="#8A8F98" font-size="10.5" text-anchor="middle" font-family="Consolas">${t}s</text>`;
+    if (slo) {
+      s += `<line x1="${L}" x2="${W - R}" y1="${y(slo.v)}" y2="${y(slo.v)}" stroke="#D29922" stroke-dasharray="6 4" stroke-width="1.5"/>`;
+      s += `<text x="${W - R - 4}" y="${y(slo.v) - 5}" fill="#D29922" font-size="11" text-anchor="end" font-weight="700">${slo.label}</text>`;
+    }
+    let lx = L + 6;
+    s += `<text x="${L}" y="14" fill="#E6E8EB" font-size="12.5" font-weight="700">${title}</text>`;
+    lx = L + 8 + title.length * 7.4;
+    for (const [d, c, name, dash] of series) {
+      const pts = d.map((v, t) => `${x(t).toFixed(1)},${y(Math.min(v, max)).toFixed(1)}`).join(' ');
+      s += `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="2" ${dash ? 'stroke-dasharray="4 3"' : ''} stroke-linejoin="round"/>`;
+      s += `<line x1="${lx + 12}" x2="${lx + 26}" y1="10" y2="10" stroke="${c}" stroke-width="2.5" ${dash ? 'stroke-dasharray="4 3"' : ''}/><text x="${lx + 30}" y="14" fill="#8A8F98" font-size="11.5">${name}</text>`;
+      lx += 40 + name.length * 6.6;
+    }
+    if (slo && slo.breachAt) {
+      s += `<circle cx="${x(slo.breachAt)}" cy="${y(slo.v)}" r="6" fill="#F85149" stroke="#0B0E14" stroke-width="2"/>`;
+      s += `<text x="${x(slo.breachAt) + 10}" y="${y(slo.v) + 16}" fill="#F85149" font-size="11" font-weight="700">✕ breach @${slo.breachAt}s</text>`;
+    }
+    s += `<line x1="${x(NOW)}" x2="${x(NOW)}" y1="${TP}" y2="${H - B}" stroke="#fff" opacity=".5"/>`;
+    return s + '</svg>';
+  }
+  document.getElementById('charts').innerHTML =
+    chart('Throughput', 30, '', [[S.target, '#8A8F98', 'target rps', 1], [S.rps, '#58A6FF', 'achieved rps']]) +
+    chart('Latency', 1200, 'ms', [[S.p50, '#3FB950', 'p50'], [S.p95, '#E8743B', 'p95'], [S.p99, '#F85149', 'p99']], { v: 500, label: 'SLO p95 500ms', breachAt: 31 }) +
+    chart('Error rate', 100, '%', [[S.err, '#F85149', 'errors']], { v: 1, label: 'SLO 1%', breachAt: 30 });
+</script>
+</body>
+</html>
