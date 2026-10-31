@@ -1,0 +1,205 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Control Tower palette: white paper and black ink, one cobalt for the network,
+   one warm orange only for "needs attention". Dark mode is obsidian. */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+  --color-cobalt: var(--cobalt);
+  --color-cobalt-soft: var(--cobalt-soft);
+  --color-flag: var(--flag);
+  --color-flag-soft: var(--flag-soft);
+  --color-mint: var(--mint);
+  --color-ink-2: var(--ink-2);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #f7f7f5;
+  --foreground: #111214;
+  --ink-2: #4d5058;
+  --card: #ffffff;
+  --card-foreground: #111214;
+  --popover: #ffffff;
+  --popover-foreground: #111214;
+  --primary: #2443dc;
+  --primary-foreground: #ffffff;
+  --secondary: #f0efec;
+  --secondary-foreground: #111214;
+  --muted: #f0efec;
+  --muted-foreground: #8b8d94;
+  --accent: #f0efec;
+  --accent-foreground: #111214;
+  --destructive: #d8432a;
+  --border: #e8e7e3;
+  --input: #e2e1dc;
+  --ring: #2443dc;
+  --cobalt: #2443dc;
+  --cobalt-soft: #e9edfd;
+  --flag: #e2582c;
+  --flag-soft: #fcece6;
+  --mint: #23966a;
+  --dots: #d9d8d3;
+  --chart-1: #2443dc;
+  --chart-2: #e2582c;
+  --chart-3: #8b8d94;
+  --chart-4: #4d5058;
+  --chart-5: #111214;
+  --radius: 0.625rem;
+  --sidebar: #f7f7f5;
+  --sidebar-foreground: #111214;
+  --sidebar-primary: #2443dc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efeeea;
+  --sidebar-accent-foreground: #111214;
+  --sidebar-border: #e8e7e3;
+  --sidebar-ring: #2443dc;
+}
+
+.dark {
+  --background: #0c0d10;
+  --foreground: #ededef;
+  --ink-2: #a7a9b1;
+  --card: #131418;
+  --card-foreground: #ededef;
+  --popover: #16171b;
+  --popover-foreground: #ededef;
+  --primary: #7b91ff;
+  --primary-foreground: #0c0d10;
+  --secondary: #1b1c21;
+  --secondary-foreground: #ededef;
+  --muted: #1b1c21;
+  --muted-foreground: #6e717a;
+  --accent: #1b1c21;
+  --accent-foreground: #ededef;
+  --destructive: #f07a4f;
+  --border: #22242a;
+  --input: #2a2c33;
+  --ring: #7b91ff;
+  --cobalt: #7b91ff;
+  --cobalt-soft: #1a2045;
+  --flag: #f07a4f;
+  --flag-soft: #2e1a12;
+  --mint: #46d39b;
+  --dots: #24262c;
+  --chart-1: #7b91ff;
+  --chart-2: #f07a4f;
+  --chart-3: #6e717a;
+  --chart-4: #a7a9b1;
+  --chart-5: #ededef;
+  --sidebar: #0c0d10;
+  --sidebar-foreground: #ededef;
+  --sidebar-primary: #7b91ff;
+  --sidebar-primary-foreground: #0c0d10;
+  --sidebar-accent: #17181d;
+  --sidebar-accent-foreground: #ededef;
+  --sidebar-border: #22242a;
+  --sidebar-ring: #7b91ff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* a ring that breathes out from an agent with an open issue */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.65); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe-pulse { animation: none !important; }
+}
+
+/* React Flow, quieted to match the rest of the app */
+.tower .react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke: var(--cobalt);
+}
+.tower .react-flow__node {
+  cursor: pointer;
+}
+.tower .react-flow__controls {
+  box-shadow: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.tower .react-flow__controls-button {
+  width: 30px;
+  height: 30px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+}
+.tower .react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+.tower .react-flow__controls-button:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.tower .react-flow__controls-button svg {
+  fill: currentColor;
+}
+.tower .react-flow__attribution {
+  background: transparent;
+  color: var(--muted-foreground);
+}
+.tower .react-flow__attribution a {
+  color: inherit;
+}
