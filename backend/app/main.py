@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from backend.app.api import architecture, experiments, reports, stream
+from backend.app.api import architecture, auth, experiments, reports, stream
 from backend.app.state import AppState
 
 
@@ -34,6 +34,7 @@ def create_app(state: AppState) -> FastAPI:
     app.include_router(experiments.router)
     app.include_router(reports.router)
     app.include_router(stream.router)
+    app.include_router(auth.router)
 
     @app.get("/api/system/health")
     def health() -> dict:

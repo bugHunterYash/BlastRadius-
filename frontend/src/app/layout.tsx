@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { AuthProvider } from "@/components/auth-provider"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -32,10 +33,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body className="antialiased">
-        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
-          {children}
-          <Toaster position="top-center" offset={64} />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+            {children}
+            <Toaster position="top-center" offset={64} />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )
