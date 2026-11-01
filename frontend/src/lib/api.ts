@@ -208,6 +208,8 @@ export const api = {
   invocation: (id: string) => req<Invocation>(`/v1/invocations/${id}`),
   /** Chats synced live from the Claude app / Claude Code and the Codex app. */
   liveSessions: (limit = 12) => req<LiveSession[]>(`/v1/live/sessions?limit=${limit}`),
+  /** Remove a synced chat from the tower for good (it stays in its own app). */
+  hideSession: (invocationId: string) => req<{ hidden: boolean; title: string | null }>(`/v1/live/sessions/${invocationId}/hide`, { method: "POST" }),
   stepsAfter: (invocationId: string, after: number) =>
     req<ApiExecEvent[]>(`/v1/invocations/${invocationId}/events?types=${STEP_TYPES}&after_sequence=${after}&limit=2000`),
   cancel: (id: string) => req(`/v1/invocations/${id}/cancel`, { method: "POST" }),

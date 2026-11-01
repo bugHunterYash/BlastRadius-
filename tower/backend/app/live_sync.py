@@ -36,11 +36,49 @@ CODEX_SOURCES = ["cli", "vscode", "exec", "appServer", "unknown"]
 
 
 async def _tower_thread_ids() -> set[str]:
-    """Sessions/threads the tower itself ran (live invocations), so they aren't synced twice."""
+    """Sessions/threads not to sync: the ones the tower itself ran (live invocations), so they aren't synced
+    twice, and the ones the person hid."""
     rows = await db.pool.fetch(
         "SELECT provider_thread_id FROM agent_invocations WHERE runtime IN ('claude_agent_sdk', 'codex_app_server', 'antigravity_cli') "
-        "AND provider_thread_id IS NOT NULL")
+        "AND provider_thread_id IS NOT NULL UNION SELECT thread_id FROM hidden_chats")
     return {r["provider_thread_id"] for r in rows}
+
+
+SYNCED_RUNTIMES = ("claude_code_import", "codex_app_import", "antigravity_app_import")
+
+
+async def _drop(thread_ids: list[str]) -> int:
+    """Remove the tower's copies of these synced chats (their steps go with them, ON DELETE CASCADE), and their
+    runs when nothing else refers to them. The chats themselves stay untouched in their apps."""
+    rows = await db.pool.fetch(
+        "DELETE FROM agent_invocations WHERE runtime = ANY($1::text[]) AND provider_thread_id = ANY($2::text[]) RETURNING run_id",
+        list(SYNCED_RUNTIMES), thread_ids)
+    runs = list({r["run_id"] for r in rows})
+    if runs:
+        await db.pool.execute("DELETE FROM agent_sessions WHERE run_id = ANY($1::text[]) AND provider_session_id = ANY($2::text[]) "
+                              "AND NOT EXISTS (SELECT 1 FROM agent_invocations i WHERE i.session_id = agent_sessions.session_id)",
+                              runs, thread_ids)
+        await db.pool.execute(
+            """DELETE FROM runs r WHERE r.run_id = ANY($1::text[])
+                 AND NOT EXISTS (SELECT 1 FROM agent_invocations i WHERE i.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM agent_sessions s WHERE s.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM events e WHERE e.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM issues x WHERE x.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM digests d WHERE d.run_id = r.run_id)""", runs)
+    return len(rows)
+
+
+async def hide(invocation_id: uuid.UUID) -> dict | None:
+    """Hide one synced chat for good: remember it so sync skips it, and remove the tower's copy."""
+    inv = await db.pool.fetchrow(
+        "SELECT provider, provider_thread_id, metadata->>'title' AS title FROM agent_invocations "
+        "WHERE invocation_id = $1 AND runtime = ANY($2::text[])", invocation_id, list(SYNCED_RUNTIMES))
+    if inv is None or not inv["provider_thread_id"]:
+        return None
+    await db.pool.execute("INSERT INTO hidden_chats (thread_id, provider, title) VALUES ($1, $2, $3) "
+                          "ON CONFLICT (thread_id) DO NOTHING", inv["provider_thread_id"], inv["provider"], inv["title"])
+    await _drop([inv["provider_thread_id"]])
+    return {"hidden": True, "provider": inv["provider"], "title": inv["title"]}
 
 
 async def _existing(key: str) -> dict | None:
@@ -396,24 +434,10 @@ async def forget_other_account_chats() -> int:
     """Remove the tower's copies of chats synced before they were recognised as another account's.
     Only the tower's own rows go; Antigravity's files are never touched."""
     ids = await asyncio.to_thread(other_account_chats)
-    if not ids:
-        return 0
-    rows = await db.pool.fetch(
-        "DELETE FROM agent_invocations WHERE runtime = $1 AND provider_thread_id = ANY($2::text[]) RETURNING run_id",
-        AGY_RUNTIME, list(ids))                    # their steps go with them (ON DELETE CASCADE)
-    runs = list({r["run_id"] for r in rows})
-    if runs:
-        await db.pool.execute("DELETE FROM agent_sessions WHERE run_id = ANY($1::text[]) AND provider = 'antigravity' "
-                              "AND NOT EXISTS (SELECT 1 FROM agent_invocations i WHERE i.session_id = agent_sessions.session_id)", runs)
-        await db.pool.execute(
-            """DELETE FROM runs r WHERE r.run_id = ANY($1::text[])
-                 AND NOT EXISTS (SELECT 1 FROM agent_invocations i WHERE i.run_id = r.run_id)
-                 AND NOT EXISTS (SELECT 1 FROM agent_sessions s WHERE s.run_id = r.run_id)
-                 AND NOT EXISTS (SELECT 1 FROM events e WHERE e.run_id = r.run_id)
-                 AND NOT EXISTS (SELECT 1 FROM issues x WHERE x.run_id = r.run_id)
-                 AND NOT EXISTS (SELECT 1 FROM digests d WHERE d.run_id = r.run_id)""", runs)
-        log.info("removed %d synced Antigravity chat(s) from another account", len(rows))
-    return len(rows)
+    n = await _drop(list(ids)) if ids else 0
+    if n:
+        log.info("removed %d synced Antigravity chat(s) from another account", n)
+    return n
 
 
 async def sync_antigravity(skip: set[str]) -> list[dict]:
@@ -481,9 +505,9 @@ async def live_sessions(limit: int = 30) -> list[dict]:
     rows = await db.pool.fetch(
         """SELECT invocation_id, run_id, agent_id, provider, runtime, status, model, last_sequence, created_at,
                   completed_at, metadata->>'title' AS title, metadata->>'cwd' AS cwd, metadata->>'app' AS app
-           FROM agent_invocations WHERE runtime IN ('claude_code_import', 'codex_app_import', 'antigravity_app_import')
+           FROM agent_invocations WHERE runtime = ANY($2::text[])
            ORDER BY COALESCE(completed_at, created_at) DESC LIMIT $1""",
-        limit,
+        limit, list(SYNCED_RUNTIMES),
     )
     return [db._out(r) for r in rows]
 

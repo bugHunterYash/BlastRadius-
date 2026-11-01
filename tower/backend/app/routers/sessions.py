@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
@@ -45,6 +47,16 @@ async def import_session(session_id: str, response: Response, body: ImportBody |
 async def live_sessions(limit: int = Query(30, ge=1, le=200)):
     """Chats synced live from the Claude app / Claude Code and the Codex app, newest first."""
     return await live_sync.live_sessions(limit)
+
+
+@router.post("/v1/live/sessions/{invocation_id}/hide", dependencies=[Depends(require_api_token)])
+async def hide_session(invocation_id: uuid.UUID):
+    """Hide a synced chat (e.g. one from an earlier account): it's removed here and never synced again.
+    The chat itself stays in its app."""
+    out = await live_sync.hide(invocation_id)
+    if out is None:
+        raise HTTPException(404, "no synced chat with this id")
+    return out
 
 
 @router.post("/v1/live/sync", dependencies=[Depends(require_api_token)])

@@ -153,6 +153,10 @@ Not tried on a real server yet.
 
 ## 6. What's built and verified with real runs
 
+- **Only this account's chats:** Antigravity keeps every account's chats in one index; only the signed-in
+  account's belong to an Antigravity project, so sync reads just those (`ANTIGRAVITY_PROJECT_CHATS_ONLY`). Any
+  synced chat can be hidden for good with "Hide from tower" (table `hidden_chats`, migration 007); Yash hid the
+  old account's Codex chats (hi, VAPT Dev Paaji, piduuu) and the AccessOrbit Claude chat on 1 Nov.
 - **Live sync:** this Claude session, real Codex threads and 20 Antigravity chats show up live; only new
   steps appended; finished steps only; running chats aren't re-read.
 - **Multi-agent chat:** `@writer @researcher …` sends one message to each, each in its own conversation.
@@ -209,3 +213,5 @@ Not tried on a real server yet.
   views don't switch. Bring the tab to the front before testing UI transitions.
 - **Shell heredocs** with nested quotes break in Git Bash; write patch scripts to files instead.
 - Never use bare `git stash` (shared across worktrees).
+- **Don't run `npm run build` while the dev UI is running**: both use `frontend/.next`, and the dev page then
+  hangs on "Connecting" with a `SyntaxError` in the console. Stop the UI, build, delete `.next`, start the UI.

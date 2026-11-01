@@ -32,7 +32,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   ]
 
   return (
-    <div className="flex h-full min-h-0 flex-col px-2.5 py-3.5">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto px-2.5 py-3.5 [scrollbar-width:thin]">
       <div className="flex items-center gap-2.5 px-2 pt-1 pb-4">
         <span className="grid size-[22px] place-items-center rounded-md bg-foreground">
           <span className="size-2 rounded-full bg-background" />
@@ -172,7 +172,7 @@ function Item({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 
 export function Sidebar() {
   return (
-    <aside className="hidden min-h-0 border-r bg-sidebar xl:block">
+    <aside className="hidden min-h-0 overflow-hidden border-r bg-sidebar xl:block">
       <SidebarContent />
     </aside>
   )

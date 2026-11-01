@@ -29,7 +29,7 @@ export function DetailsDrawer() {
       case "trace":
         return <TraceView id={view.id} />
       case "live":
-        return <LiveSessionView id={view.id} onOpenWorkspace={openWorkspace} />
+        return <LiveSessionView id={view.id} onOpenWorkspace={openWorkspace} onHidden={() => setTab("chat")} />
     }
   })()
 

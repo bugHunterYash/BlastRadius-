@@ -32,7 +32,7 @@ function Screen() {
   if (state.source !== "live") return <Waiting />
   return (
     <>
-      <div className="tower grid h-dvh grid-cols-1 bg-background xl:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="tower grid h-dvh grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden bg-background xl:grid-cols-[220px_minmax(0,1fr)]">
         <Sidebar />
         <div className="grid min-h-0 min-w-0 grid-rows-[52px_minmax(0,1fr)]">
           <TopBar />

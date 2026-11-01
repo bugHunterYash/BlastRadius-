@@ -212,6 +212,23 @@ def test_only_the_signed_in_accounts_antigravity_chats_are_synced(client, monkey
     assert titles() == ["Plan the release"]                                   # and it doesn't come back
 
 
+def test_a_hidden_chat_is_removed_and_never_synced_again(client, monkeypatch, tmp_path):
+    from app.config import settings
+    c, *_ = client
+    _agy_index(tmp_path / "agy", status="CASCADE_RUN_STATUS_IDLE")
+    monkeypatch.setattr(settings, "ANTIGRAVITY_DIR", str(tmp_path / "agy"))
+    c.post("/v1/live/sync", headers=AUTH)
+    chat = next(s for s in c.get("/v1/live/sessions", headers=AUTH).json() if s["title"] == "Plan the release")
+
+    assert c.post(f"/v1/live/sessions/{chat['invocation_id']}/hide", headers=NO_TOKEN).status_code == 401
+    r = c.post(f"/v1/live/sessions/{chat['invocation_id']}/hide", headers=AUTH)
+    assert r.status_code == 200 and r.json()["title"] == "Plan the release"
+    assert c.get(f"/v1/invocations/{chat['invocation_id']}", headers=AUTH).status_code == 404
+    c.post("/v1/live/sync", headers=AUTH)
+    assert not [s for s in c.get("/v1/live/sessions", headers=AUTH).json() if s["title"] == "Plan the release"]
+    assert c.post(f"/v1/live/sessions/{chat['invocation_id']}/hide", headers=AUTH).status_code == 404
+
+
 def test_project_folder_can_be_added_only_where_a_synced_session_works(client, monkeypatch, tmp_path):
     import json
     import sqlite3
