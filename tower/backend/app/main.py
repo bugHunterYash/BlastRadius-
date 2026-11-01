@@ -5,14 +5,15 @@ that into issues, digests and fixes."""
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import db, execution, pipeline
 from app.runtime import auth as agent_auth
 from app.agents import fixer, summarizer
 from app.config import DEV_TOKEN, settings
-from app.routers import (agents, approvals, blast, design, events, issues, notebook, runs, sessions, stream,
+from app import live_sync, projects
+from app.routers import (agents, approvals, blast, blastx, design, events, issues, notebook, runs, sessions, stream,
                          timeline)
 
 log = logging.getLogger("tower")
@@ -24,9 +25,14 @@ async def lifespan(app: FastAPI):
     if settings.TOWER_INGEST_TOKEN == DEV_TOKEN:
         log.warning("TOWER_INGEST_TOKEN is the dev default; set a real secret before deploying")
     await db.init()
+    await projects.load()
     task = pipeline.start()
     execution.start()
+    if n := await execution.recover_interrupted():
+        log.warning("marked %d interrupted agent task(s) as failed", n)
+    syncing = live_sync.start()
     yield
+    await live_sync.shutdown(syncing)
     await execution.shutdown()
     await agent_auth.shutdown()
     task.cancel()
@@ -40,8 +46,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type", "Authorization"],
 )
-for r in (events, runs, issues, timeline, design, approvals, blast, notebook, stream, agents, sessions):
-    app.include_router(r.router)
+# health and event ingest (its own token) are open; everything else needs the API token
+app.include_router(events.router)
+for r in (runs, issues, timeline, design, approvals, blast, blastx, notebook, stream, agents, sessions):
+    app.include_router(r.router, dependencies=[Depends(agents.require_api_token)])
 
 
 @app.get("/v1/health", tags=["meta"])

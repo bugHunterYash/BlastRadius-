@@ -14,13 +14,16 @@ from app.runtime import workspace
 from app.runtime.base import AgentRuntime
 from app.runtime.models import AgentRoute
 
-PROVIDER_RUNTIME = {"claude": "claude_agent_sdk", "codex": "codex_app_server", "replay": "replay"}
+PROVIDER_RUNTIME = {"claude": "claude_agent_sdk", "codex": "codex_app_server", "antigravity": "antigravity_cli",
+                    "replay": "replay"}
 PROVIDER_ENABLED = {
     "claude": lambda: settings.CLAUDE_RUNTIME_ENABLED,
     "codex": lambda: settings.CODEX_RUNTIME_ENABLED,
+    "antigravity": lambda: settings.ANTIGRAVITY_RUNTIME_ENABLED,
     "replay": lambda: settings.REPLAY_RUNTIME_ENABLED,
 }
 DEFAULT_MODEL = {"claude": lambda: settings.CLAUDE_AGENT_MODEL, "codex": lambda: settings.CODEX_MODEL,
+                 "antigravity": lambda: settings.ANTIGRAVITY_MODEL,
                  "replay": lambda: ""}
 _MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/\[\]-]{0,99}$")
 READ_TOOLS, WRITE_TOOLS, EXEC_TOOLS = ["Read", "Glob", "Grep"], ["Edit", "Write"], ["Bash"]
@@ -38,10 +41,11 @@ _registry: dict[str, AgentRuntime] = {}
 
 def registry() -> dict[str, AgentRuntime]:
     if not _registry:
+        from app.runtime.antigravity_cli import AntigravityRuntime
         from app.runtime.claude_sdk import ClaudeRuntime
         from app.runtime.codex_app_server import CodexRuntime
         from app.runtime.replay import ReplayRuntime
-        _registry.update({r.name: r for r in (ClaudeRuntime(), CodexRuntime(), ReplayRuntime())})
+        _registry.update({r.name: r for r in (ClaudeRuntime(), CodexRuntime(), AntigravityRuntime(), ReplayRuntime())})
     return _registry
 
 
@@ -64,7 +68,7 @@ def system_prompt(agent_id: str) -> str | None:
 
 
 def resolve(agent_id: str, design: dict, workspace_override: str | None = None,
-            design_id: str | None = None) -> AgentRoute:
+            design_id: str | None = None, read_only: bool = False) -> AgentRoute:
     if agent_id not in design.get("agents", []):
         raise RoutingError(404, f"agent {agent_id!r} is not in the active design")
     rt = (design.get("runtimes") or {}).get(agent_id)
@@ -95,7 +99,9 @@ def resolve(agent_id: str, design: dict, workspace_override: str | None = None,
         raise RoutingError(422, str(exc)) from exc
 
     perms = {"read": True, "write": False, "execute": False, **(rt.get("permissions") or {})}
-    tools = rt.get("allowed_tools") or (
+    if read_only:
+        perms.update(write=False, execute=False)
+    tools = (None if read_only else rt.get("allowed_tools")) or (
         (READ_TOOLS if perms["read"] else []) + (WRITE_TOOLS if perms["write"] else [])
         + (EXEC_TOOLS if perms["execute"] else []))
     mode = rt.get("permission_mode") or settings.AGENT_DEFAULT_PERMISSION_MODE

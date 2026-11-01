@@ -4,6 +4,8 @@ import { AgentAccess } from "./agent-access"
 import { CommandMenu } from "./command-menu"
 import { Workspace } from "./graph-panel"
 import { DetailsDrawer } from "./panel"
+import { NewProject } from "./new-project"
+import { ProjectWorkspace } from "./project-workspace"
 import { SessionReportView } from "./session-report"
 import { Sidebar } from "./sidebar"
 import { TopBar } from "./top-bar"
@@ -22,6 +24,8 @@ export function ControlTower() {
       <DetailsDrawer />
       <CommandMenu />
       <SessionReportView />
+      <ProjectWorkspace />
+      <NewProject />
       <AgentAccess />
     </TowerProvider>
   )

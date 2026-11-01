@@ -1,6 +1,7 @@
 """Load, check and publish the intended agent design (design.json from our design tool, or YAML)."""
 
 import json
+import os
 from pathlib import Path
 
 import httpx
@@ -32,7 +33,8 @@ def check(spec: dict) -> list[str]:
     return problems
 
 
-def push(path: str | Path, api_url: str = "http://localhost:8000") -> dict:
-    r = httpx.put(f"{api_url}/v1/design", json=load(path), timeout=15)
+def push(path: str | Path, api_url: str = "http://localhost:8000", token: str | None = None) -> dict:
+    token = token or os.environ.get("TOWER_API_TOKEN") or os.environ.get("TOWER_INGEST_TOKEN", "dev-ingest-token-change-me")
+    r = httpx.put(f"{api_url}/v1/design", json=load(path), headers={"Authorization": f"Bearer {token}"}, timeout=15)
     r.raise_for_status()
     return r.json()

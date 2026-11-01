@@ -66,8 +66,8 @@ class NotebookWrite(BaseModel):
 
 class AgentRuntimeSpec(BaseModel):
     """How one agent is executed. Model ids are configuration, never hard-coded."""
-    provider: Literal["claude", "codex", "replay"]
-    runtime: Literal["claude_agent_sdk", "codex_app_server", "replay"] | None = None
+    provider: Literal["claude", "codex", "antigravity", "replay"]
+    runtime: Literal["claude_agent_sdk", "codex_app_server", "antigravity_cli", "replay"] | None = None
     model: str | None = None
     enabled: bool = True
     workspace_id: str | None = None

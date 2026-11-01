@@ -46,4 +46,4 @@ def test_same_event_twice_is_stored_once(fresh_db):
 
 def test_design_is_seeded_from_design_json(fresh_db):
     spec = asyncio.run(_with_db(db.get_design))
-    assert spec["agents"] == ["researcher", "writer", "reviewer", "publisher"]
+    assert spec["agents"] == ["researcher", "writer", "reviewer", "publisher", "analyst"]

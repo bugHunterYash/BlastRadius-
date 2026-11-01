@@ -6,6 +6,7 @@ from claude_agent_sdk import SDKSessionInfo, SessionMessage
 from fastapi.testclient import TestClient
 
 from app.session_import import normalize
+from tests.conftest import NO_TOKEN
 
 AUTH = {"Authorization": "Bearer test-token"}
 SID = "11111111-2222-3333-4444-555555555555"
@@ -67,7 +68,7 @@ def client(fresh_db, monkeypatch):
 
 
 def test_list_and_import_local_session(client):
-    assert client.get("/v1/claude-sessions").status_code == 401           # private titles/prompts need the token
+    assert client.get("/v1/claude-sessions", headers=NO_TOKEN).status_code == 401           # private titles/prompts need the token
     sessions = client.get("/v1/claude-sessions", headers=AUTH).json()
     assert sessions[0]["session_id"] == SID and sessions[0]["title"] == "Login bug fix"
 

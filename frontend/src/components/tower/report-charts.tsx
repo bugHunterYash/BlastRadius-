@@ -11,18 +11,27 @@ const agentConfig = {
   writer: { label: "Writer", color: "var(--agent-writer)" },
   reviewer: { label: "Reviewer", color: "var(--agent-reviewer)" },
   publisher: { label: "Publisher", color: "var(--agent-publisher)" },
+  analyst: { label: "Analyst", color: "var(--agent-analyst)" },
 } satisfies ChartConfig
+
+/** "75" seconds -> "1:15", "5400" -> "1h 30m". */
+const span = (v: unknown) => {
+  const s = Math.round(Number(v))
+  return s < 3600 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`
+}
 
 const axis = { tickLine: false, axisLine: false, tick: { fontSize: 12.5, fontWeight: 600, fill: "var(--muted-foreground)" } } as const
 
-/** Calls per 30 seconds, stacked by agent: you can see the team hand the work along. */
+/** Work per time window, stacked by agent: you can see the team hand the work along. */
 export function ActivityChart({ data }: { data: SessionReport["charts"]["activity"] }) {
-  const agents = Object.keys(agentConfig) as (keyof typeof agentConfig)[]
+  // only the agents in this run, in the palette's order
+  const present = new Set(Object.keys(data[0] ?? {}))
+  const agents = (Object.keys(agentConfig) as (keyof typeof agentConfig)[]).filter((a) => present.has(a))
   return (
     <ChartContainer config={agentConfig} className="aspect-auto h-[260px] w-full">
       <BarChart data={data} margin={{ top: 8, right: 4, left: -18, bottom: 0 }} barCategoryGap={3}>
         <CartesianGrid vertical={false} strokeDasharray="3 4" stroke="var(--border)" />
-        <XAxis dataKey="time" {...axis} tickFormatter={(t: string) => t.slice(0, 5)} interval={3} />
+        <XAxis dataKey="time" {...axis} tickFormatter={(t: string) => t.slice(0, 5)} interval="preserveStartEnd" minTickGap={24} />
         <YAxis {...axis} allowDecimals={false} width={44} />
         <ChartTooltip cursor={{ fill: "var(--muted)", opacity: 0.6 }} content={<ChartTooltipContent labelFormatter={(t) => `From ${t}`} />} />
         <ChartLegend content={<ChartLegendContent />} itemSorter={(item) => agents.indexOf(item.dataKey as keyof typeof agentConfig)} />
@@ -115,13 +124,13 @@ export function PhaseTimeChart({ data }: { data: SessionReport["charts"]["phaseT
     <ChartContainer config={timeConfig} className="aspect-auto h-[230px] w-full">
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 40, left: 4, bottom: 0 }} barCategoryGap={12}>
         <CartesianGrid horizontal={false} strokeDasharray="3 4" stroke="var(--border)" />
-        <XAxis type="number" {...axis} ticks={[0, 30, 60, 90, 120]} domain={[0, 120]} tickFormatter={(s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`} />
+        <XAxis type="number" {...axis} domain={[0, "dataMax"]} allowDecimals={false} tickFormatter={span} />
         <YAxis type="category" dataKey="phase" {...axis} width={86} tick={{ fontSize: 13.5, fontWeight: 700, fill: "var(--foreground)" }} />
         <ChartTooltip
           cursor={{ fill: "var(--muted)", opacity: 0.6 }}
-          content={<ChartTooltipContent hideIndicator formatter={(v) => [`${Math.floor(Number(v) / 60)}m ${Number(v) % 60}s active`, ""]} />}
+          content={<ChartTooltipContent hideIndicator formatter={(v) => [`${span(v)} active`, ""]} />}
         />
-        <Bar dataKey="seconds" radius={4} animationDuration={700} label={{ position: "right", fontSize: 12.5, fontWeight: 700, fill: "var(--muted-foreground)", formatter: (v: unknown) => `${Math.floor(Number(v) / 60)}:${String(Number(v) % 60).padStart(2, "0")}` }}>
+        <Bar dataKey="seconds" radius={4} animationDuration={700} label={{ position: "right", fontSize: 12.5, fontWeight: 700, fill: "var(--muted-foreground)", formatter: span }}>
           {data.map((d) => (
             <Cell key={d.phase} fill={agentColor(d.agent)} />
           ))}

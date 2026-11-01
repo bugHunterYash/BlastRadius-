@@ -164,7 +164,7 @@ function toolTarget(input: unknown): string {
   const i = input as Record<string, unknown>
   for (const k of ["file_path", "path", "pattern", "command", "url", "query", "notebook_path"]) if (i[k]) return short(i[k], 90)
   const first = Object.values(i)[0]
-  return first === undefined ? "" : short(first, 90)
+  return first === undefined ? "" : short(typeof first === "object" ? JSON.stringify(first) : first, 90)
 }
 
 /**

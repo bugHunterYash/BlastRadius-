@@ -10,19 +10,23 @@ import type { CallKind } from "@/lib/types"
 import { Counters } from "./counters"
 import { MemoryGraph } from "./memory-graph"
 import { ActivityStrip } from "./activity-strip"
+import { BlastXView } from "./blastx-graph"
 import { ReplayBar } from "./replay-bar"
 import { SharedChat, useVisibleCalls } from "./shared-chat"
 import { useTower } from "./tower-store"
 
 const MIN_PANEL = 380
 const MIN_CHAT = 440
+/** The graph's share of the width until someone drags the divider: chat 60, graph 40. */
+const GRAPH_SHARE = 0.4
 
 /** Chat in the main column, the graph beside it like an artifact panel: resizable, foldable, or full screen. */
 export function Workspace() {
   const { state } = useTower()
   const { graphView } = state
   const box = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(560)
+  // null = follow the 60/40 split; a number once the divider has been dragged
+  const [width, setWidth] = useState<number | null>(null)
   const [dragging, setDragging] = useState(false)
 
   const onDrag = useCallback((e: PointerEvent) => {
@@ -76,7 +80,7 @@ export function Workspace() {
           graphView === "collapsed" && "h-14 lg:h-auto lg:w-14",
           graphView === "full" && "h-[85vh] flex-1 lg:h-auto",
         )}
-        style={{ "--panel-w": `${width}px` } as React.CSSProperties}
+        style={{ "--panel-w": width === null ? `max(${MIN_PANEL}px, ${GRAPH_SHARE * 100}%)` : `${width}px` } as React.CSSProperties}
       >
         {graphView === "collapsed" ? <CollapsedStrip /> : <GraphPane />}
       </section>
@@ -87,17 +91,32 @@ export function Workspace() {
 function GraphPane() {
   const { state, setGraphView } = useTower()
   const full = state.graphView === "full"
+  const [tab, setTab] = useState<"memory" | "architecture">("memory")
   const [showReads, setShowReads] = useState(true)
   const [showHandoffs, setShowHandoffs] = useState(true)
   const [showLabels, setShowLabels] = useState(true)
   return (
     <>
       <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-        <span className="text-[15px] font-semibold">Memory graph</span>
-        <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-          <span className={cn("size-1.5 rounded-full", state.playing ? "animate-pulse bg-flag" : "bg-mint")} />
-          {state.mode === "trace" ? "Trace" : state.mode === "replay" ? "Replay" : state.playing ? "Live" : "Run ended"}
-        </span>
+        <div role="tablist" aria-label="Graph" className="flex rounded-[9px] bg-muted p-[3px] text-[14px]">
+          {(["memory", "architecture"] as const).map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={cn("h-7 rounded-[7px] px-2.5 text-ink-2", tab === t && "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.08)]")}
+            >
+              {t === "memory" ? "Memory" : "Architecture · BlastX"}
+            </button>
+          ))}
+        </div>
+        {tab === "memory" && (
+          <span className="hidden items-center gap-1.5 text-[13px] text-muted-foreground sm:flex">
+            <span className={cn("size-1.5 rounded-full", state.playing ? "animate-pulse bg-flag" : "bg-mint")} />
+            {state.mode === "trace" ? "Trace" : state.mode === "replay" ? "Replay" : state.playing ? "Live" : "Run ended"}
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-0.5">
           <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={full ? "Show the chat again" : "Expand the graph"} onClick={() => setGraphView(full ? "panel" : "full")}>
             <Icon name={full ? "close_fullscreen" : "open_in_full"} size={20} />
@@ -109,21 +128,29 @@ function GraphPane() {
           )}
         </div>
       </div>
-      {/* what the graph draws */}
-      <div className="flex h-11 shrink-0 items-center gap-5 overflow-x-auto border-b px-4 text-[13.5px] font-semibold text-ink-2">
-        <Toggle id="t-reads" label="Reads" checked={showReads} onChange={setShowReads} />
-        <Toggle id="t-handoffs" label="Handoffs" checked={showHandoffs} onChange={setShowHandoffs} />
-        <Toggle id="t-labels" label="Memory names" checked={showLabels} onChange={setShowLabels} />
-      </div>
-      <div className="relative min-h-0 flex-1 bg-paper">
-        <ReactFlowProvider>
-          <MemoryGraph showReads={showReads} showHandoffs={showHandoffs} showLabels={showLabels} />
-        </ReactFlowProvider>
-        <Counters />
-        <GraphKey />
-        <ReplayBar />
-      </div>
-      <ActivityStrip />
+      {tab === "architecture" ? (
+        <div className="min-h-0 flex-1">
+          <BlastXView />
+        </div>
+      ) : (
+        <>
+          {/* what the graph draws */}
+          <div className="flex h-11 shrink-0 items-center gap-5 overflow-x-auto border-b px-4 text-[13.5px] font-semibold text-ink-2">
+            <Toggle id="t-reads" label="Reads" checked={showReads} onChange={setShowReads} />
+            <Toggle id="t-handoffs" label="Handoffs" checked={showHandoffs} onChange={setShowHandoffs} />
+            <Toggle id="t-labels" label="Memory names" checked={showLabels} onChange={setShowLabels} />
+          </div>
+          <div className="relative min-h-0 flex-1 bg-paper">
+            <ReactFlowProvider>
+              <MemoryGraph showReads={showReads} showHandoffs={showHandoffs} showLabels={showLabels} />
+            </ReactFlowProvider>
+            <Counters />
+            <GraphKey />
+            <ReplayBar />
+          </div>
+          <ActivityStrip />
+        </>
+      )}
     </>
   )
 }

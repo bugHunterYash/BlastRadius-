@@ -12,7 +12,7 @@ import { cap } from "@/lib/format"
 import { DESIGN, PROVIDERS } from "@/lib/data"
 import { useTower } from "./tower-store"
 
-type Provider = "claude" | "codex"
+type Provider = "claude" | "codex" | "antigravity"
 type AuthMap = Partial<Record<Provider, ProviderAuth>>
 
 const INFO: Record<Provider, { name: string; how: string; account: string }> = {
@@ -25,6 +25,11 @@ const INFO: Record<Provider, { name: string; how: string; account: string }> = {
     name: "Codex",
     how: "Opens ChatGPT’s sign-in page for the Codex CLI on this machine.",
     account: "ChatGPT account",
+  },
+  antigravity: {
+    name: "Antigravity",
+    how: "Signs in with Google inside the Antigravity app. Open Antigravity, sign in there, and the tower picks it up.",
+    account: "Google account",
   },
 }
 
@@ -43,7 +48,7 @@ export function useAgentAuth(poll = false) {
   const refresh = useCallback(async () => {
     try {
       const a = await api.auth()
-      publish({ claude: a.claude, codex: a.codex })
+      publish({ claude: a.claude, codex: a.codex, antigravity: a.antigravity })
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -81,7 +86,7 @@ export function AgentAccess() {
         </DialogHeader>
         {error && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[13px] text-destructive">Backend not reachable: {error}</p>}
         <div className="flex flex-col gap-3">
-          {(["claude", "codex"] as Provider[]).map((p) => (
+          {(["claude", "codex", "antigravity"] as Provider[]).map((p) => (
             <ProviderCard key={p} provider={p} auth={auth[p]} onChange={refresh} />
           ))}
         </div>
@@ -111,7 +116,7 @@ function ProviderCard({ provider, auth, onChange }: { provider: Provider; auth?:
   const start = async () => {
     setBusy(true)
     try {
-      const l = await api.login(provider)
+      const l = await api.login(provider as "claude" | "codex")
       if (l.url) window.open(l.url, "_blank", "noopener,noreferrer")
       onChange()
     } catch (e) {
@@ -173,8 +178,12 @@ function ProviderCard({ provider, auth, onChange }: { provider: Provider; auth?:
           )}
         </div>
         <div className="flex shrink-0 flex-col gap-1.5">
-          {pending ? (
-            <Button size="sm" variant="outline" onClick={() => api.cancelLogin(provider).then(onChange, onChange)}>
+          {provider === "antigravity" ? (
+            <Button size="sm" variant="outline" onClick={onChange}>
+              Check again
+            </Button>
+          ) : pending ? (
+            <Button size="sm" variant="outline" onClick={() => api.cancelLogin(provider as "claude" | "codex").then(onChange, onChange)}>
               Cancel
             </Button>
           ) : (

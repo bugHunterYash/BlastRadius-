@@ -8,6 +8,7 @@ export const AGENT_ICON: Record<string, string> = {
   writer: "edit_note",
   reviewer: "verified",
   publisher: "campaign",
+  analyst: "insights",
   you: "person",
 }
 

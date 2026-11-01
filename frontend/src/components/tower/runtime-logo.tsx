@@ -1,11 +1,13 @@
 "use client"
 
+import { useId } from "react"
 import { cn } from "@/lib/utils"
 import { AGENT_META } from "@/lib/data"
 import { AgentGlyph } from "./agent-glyph"
 
 /** Small marks for the runtime behind an agent, so "Writer" reads as "Writer, running on Claude Code". */
 export function RuntimeMark({ provider, className }: { provider?: string; className?: string }) {
+  const gradient = useId()
   if (provider === "claude") {
     // an orange starburst, the shape people recognise as Claude
     return (
@@ -28,10 +30,25 @@ export function RuntimeMark({ provider, className }: { provider?: string; classN
       </svg>
     )
   }
+  if (provider === "antigravity") {
+    // an arch lifting off: Antigravity
+    return (
+      <svg viewBox="0 0 24 24" className={className} aria-hidden>
+        <defs>
+          <linearGradient id={gradient} x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stopColor="#4285F4" />
+            <stop offset="0.5" stopColor="#9B72CB" />
+            <stop offset="1" stopColor="#D96570" />
+          </linearGradient>
+        </defs>
+        <path d="M3.5 20.5C6 20.5 7.6 17 9.2 12.6 10.4 9.2 11 5 12 5s1.6 4.2 2.8 7.6C16.4 17 18 20.5 20.5 20.5" fill="none" stroke={`url(#${gradient})`} strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    )
+  }
   return null
 }
 
-export const RUNTIME_LABEL: Record<string, string> = { claude: "Claude Code", codex: "Codex", replay: "Replay" }
+export const RUNTIME_LABEL: Record<string, string> = { claude: "Claude Code", codex: "Codex", antigravity: "Antigravity", replay: "Replay" }
 
 /** The agent's glyph (its role icon in its colour) with its runtime's logo on the corner. */
 export function AgentAvatar({ agent, size = 28, speaking = false }: { agent: string; size?: number; speaking?: boolean }) {

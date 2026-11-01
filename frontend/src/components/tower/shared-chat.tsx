@@ -125,7 +125,7 @@ function TaskCard({ call: c }: { call: MekoCall }) {
 const STEP_ICON: Partial<Record<CallKind, string>> = { tool: "build", command: "terminal", file: "description" }
 
 /** One runtime step: a tool call, a command or a file change, with its status, result and reason. */
-function StepRow({ call: c }: { call: MekoCall }) {
+export function StepRow({ call: c }: { call: MekoCall }) {
   const s = c.exec?.status
   return (
     <div className="rounded-lg border bg-card px-3 py-2">
@@ -364,6 +364,31 @@ function mentionAt(text: string, caret: number): { query: string; start: number 
   return m ? { query: m[2].toLowerCase(), start: caret - m[2].length - 1 } : null
 }
 
+const TAG = /(^|\s)@([\w-]+)/g
+
+/** The target a tag names: its id first, then any of its keys ("@claude", "@codex"). */
+const resolve = (word: string, targets: Target[]) => {
+  const k = word.toLowerCase()
+  return targets.find((t) => t.id === k) ?? targets.find((t) => t.keys.includes(k))
+}
+
+/** Everyone tagged in the message, in order, once each. */
+function tagged(text: string, targets: Target[]): Target[] {
+  const out: Target[] = []
+  for (const m of text.matchAll(TAG)) {
+    const hit = resolve(m[2], targets)
+    if (hit && !out.includes(hit)) out.push(hit)
+  }
+  return out
+}
+
+/** "@writer @researcher compare these" → "compare these". Tags inside the sentence stay as context. */
+function stripLeadingTags(text: string, targets: Target[]) {
+  let rest = text.trim()
+  for (let m = /^@([\w-]+)[\s,]*/.exec(rest); m && resolve(m[1], targets); m = /^@([\w-]+)[\s,]*/.exec(rest)) rest = rest.slice(m[0].length)
+  return rest.trim()
+}
+
 function Composer() {
   const { state, postNote, ask, newChat, setAccessOpen } = useTower()
   const { auth } = useAgentAuth()
@@ -390,43 +415,41 @@ function Composer() {
     : []
   const open = matches.length > 0
 
+  // tag several agents and the same message goes to each of them; no tag = the chip's target
+  const tags = tagged(draft, targets)
+  const recipients = tags.length ? tags.map((t) => t.id) : [target]
+  const loggedOut = (id: string) => {
+    const p = id === MEMORY ? null : PROVIDERS[id]
+    const a = p === "claude" || p === "codex" || p === "antigravity" ? auth[p] : undefined
+    return !!a && !a.logged_in
+  }
   const provider = target === MEMORY ? null : PROVIDERS[target]
-  const providerAuth = provider === "claude" || provider === "codex" ? auth[provider] : undefined
-  const needsLogin = !!providerAuth && !providerAuth.logged_in
-  const inConversation = target !== MEMORY && !!state.chatSessions[target]
+  const needsLogin = recipients.some(loggedOut)
+  const loginFor = PROVIDERS[recipients.find(loggedOut) ?? ""]
+  const inConversation = !tags.length && target !== MEMORY && !!state.chatSessions[target]
 
   const choose = (t: Target) => {
-    setTarget(t.id)
-    if (mention) {
-      // drop the typed "@clau" — the chip shows who you're talking to
-      const caret = area.current?.selectionStart ?? draft.length
-      const next = (draft.slice(0, mention.start) + draft.slice(caret)).replace(/^\s+/, "")
-      setDraft(next)
-      requestAnimationFrame(() => area.current?.setSelectionRange(next.length, next.length))
-    }
+    // the tag stays in the text, so you can tag more agents in the same message
+    const caret = area.current?.selectionStart ?? draft.length
+    const start = mention?.start ?? caret
+    const before = `${draft.slice(0, start)}@${t.id} `
+    const next = before + draft.slice(caret).replace(/^\s+/, "")
+    setDraft(next)
+    requestAnimationFrame(() => area.current?.setSelectionRange(before.length, before.length))
     setMention(null)
     area.current?.focus()
   }
 
   const send = () => {
-    let text = draft.trim()
-    let to = target
-    // "@writer explain this" sent without picking from the list still goes to the writer
-    const lead = /^@([\w-]+)\s+([\s\S]+)$/.exec(text)
-    if (lead) {
-      const hit = targets.find((t) => t.id === lead[1].toLowerCase() || t.keys.includes(lead[1].toLowerCase()))
-      if (hit) {
-        to = hit.id
-        text = lead[2].trim()
-        setTarget(hit.id)
-      }
-    }
+    const text = stripLeadingTags(draft, targets)
     if (!text) return
-    const toProvider = to === MEMORY ? null : PROVIDERS[to]
-    const toAuth = toProvider === "claude" || toProvider === "codex" ? auth[toProvider] : undefined
-    if (toAuth && !toAuth.logged_in) return setAccessOpen(true)
-    if (to === MEMORY) postNote(text)
-    else void ask(to, text)
+    if (needsLogin) return setAccessOpen(true)
+    for (const to of recipients) {
+      if (to === MEMORY) postNote(text)
+      else void ask(to, text)
+    }
+    // one agent tagged: follow-ups go on to it without tagging again
+    if (tags.length === 1) setTarget(tags[0].id)
     setDraft("")
     setMention(null)
   }
@@ -510,7 +533,18 @@ function Composer() {
           className="block max-h-40 w-full resize-none bg-transparent px-1.5 pt-1 text-[16.5px] leading-relaxed outline-none placeholder:text-muted-foreground"
         />
         <div className="mt-2 flex items-center gap-2">
-          {target === MEMORY ? (
+          {tags.length > 0 ? (
+            <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-[13px]">
+              <span className="text-muted-foreground">To</span>
+              {tags.map((t) => (
+                <span key={t.id} className="inline-flex h-7 items-center gap-1.5 rounded-full border py-0 pr-2.5 pl-1.5">
+                  {t.id === MEMORY ? <Icon name="database" size={16} className="text-muted-foreground" /> : <AgentAvatar agent={t.id} size={18} />}
+                  <b className="font-semibold" style={t.id === MEMORY ? undefined : { color: agentColor(t.id) }}>{t.id === MEMORY ? DATAPACK : cap(t.id)}</b>
+                </span>
+              ))}
+              {tags.length > 1 && <span className="text-muted-foreground">each gets the message</span>}
+            </span>
+          ) : target === MEMORY ? (
             <span className="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[13px] text-muted-foreground">
               <Icon name="database" size={15} />
               {DATAPACK}
@@ -528,7 +562,7 @@ function Composer() {
           {needsLogin ? (
             <Button type="button" size="sm" variant="secondary" className="h-7 gap-1.5 rounded-full text-[13px]" onClick={() => setAccessOpen(true)}>
               <Icon name="key" size={15} />
-              Connect {RUNTIME_LABEL[provider!] ?? provider}
+              Connect {RUNTIME_LABEL[loginFor] ?? loginFor}
             </Button>
           ) : inConversation ? (
             <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
@@ -537,9 +571,9 @@ function Composer() {
                 New conversation
               </button>
             </span>
-          ) : (
+          ) : tags.length ? null : (
             <span className="hidden truncate text-[13px] text-muted-foreground sm:inline">
-              {target === MEMORY ? "Type @ to ask Claude or Codex" : `Runs on ${RUNTIME_LABEL[provider!] ?? provider}; every step is recorded`}
+              {target === MEMORY ? "Type @ to tag agents; tag several to ask each" : `Runs on ${RUNTIME_LABEL[provider!] ?? provider}; every step is recorded`}
             </span>
           )}
           <Button type="submit" size="icon" className="ml-auto size-8 shrink-0 rounded-lg bg-cobalt text-white hover:bg-cobalt/90" disabled={!draft.trim() || needsLogin} aria-label="Send">

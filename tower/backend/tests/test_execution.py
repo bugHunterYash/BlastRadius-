@@ -17,6 +17,7 @@ from app.runtime import router as agent_router
 from app.runtime.claude_sdk import ClaudeRuntime
 from app.runtime.codex_app_server import CodexRuntime
 from tests.fakes import FAKE_CODEX, FakeClaudeClient
+from tests.conftest import NO_TOKEN
 
 AUTH = {"Authorization": "Bearer test-token"}
 RUNTIMES = {
@@ -62,7 +63,7 @@ def wait_terminal(c, invocation_id, timeout=20):
 
 def test_invoke_requires_token_and_valid_route(client):
     body = {"run_id": "r", "prompt": "hi"}
-    assert client.post("/v1/agents/researcher/invoke", json=body).status_code == 401
+    assert client.post("/v1/agents/researcher/invoke", json=body, headers=NO_TOKEN).status_code == 401
     assert client.post("/v1/agents/nobody/invoke", json=body, headers=AUTH).status_code == 404
     bad_ws = client.post("/v1/agents/writer/invoke", json={**body, "workspace_id": "../etc"}, headers=AUTH)
     assert bad_ws.status_code == 422
@@ -143,7 +144,7 @@ def test_cancel_stops_codex_and_records_it(client, monkeypatch):
             break
         time.sleep(0.1)
     time.sleep(0.3)
-    assert client.post(f"/v1/invocations/{iid}/cancel").status_code == 401
+    assert client.post(f"/v1/invocations/{iid}/cancel", headers=NO_TOKEN).status_code == 401
     assert client.post(f"/v1/invocations/{iid}/cancel", headers=AUTH).status_code == 202
     inv = wait_terminal(client, iid)
     assert inv["status"] == "cancelled"
@@ -327,3 +328,21 @@ def test_run_invocations_full_returns_whole_prompt_and_answer(client):
     full = client.get("/v1/runs/chat-x/invocations", params={"full": "true"}).json()["invocations"][0]
     assert short["user_prompt"] is None and len(short["prompt_preview"]) == 300
     assert full["user_prompt"] == long_prompt and full["final_response"] == "Draft: launch at ₹499."
+
+
+def test_tasks_left_running_by_a_crash_are_marked_failed(client):
+    import uuid
+    from app import db, execution
+    r = invoke(client, "researcher")
+    iid = r.json()["invocation_id"]
+    wait_terminal(client, iid)
+
+    async def pretend_crash():
+        await db.pool.execute("UPDATE agent_invocations SET status = 'running', completed_at = NULL WHERE invocation_id = $1",
+                              uuid.UUID(iid))
+        return await execution.recover_interrupted()
+    assert client.portal.call(pretend_crash) == 1
+    inv = client.get(f"/v1/invocations/{iid}").json()
+    assert inv["status"] == "failed" and inv["error_message"].startswith("Interrupted")
+    events = client.get(f"/v1/invocations/{iid}/events").json()
+    assert events[-1]["event_type"] == "invocation.failed" and events[-1]["payload"]["recovered"] is True

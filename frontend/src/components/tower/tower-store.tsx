@@ -8,7 +8,7 @@ import { api, chatRun, loadSnapshot, STREAM_URL, type ExecEvent } from "@/lib/ap
 import { applySnapshot, CALLS, CHAT_SESSIONS, DATAPACK, datapackOf, EVENTS, HEADLINE_TRACE, ISSUES, isChatCall, LATE_FIX, RUN_ID, SOURCE, type Source } from "@/lib/data"
 import type { Fix, Issue, MekoCall } from "@/lib/types"
 
-export type ViewKind = "run" | "issues" | "runs" | "agent" | "fact" | "issue" | "trace"
+export type ViewKind = "run" | "issues" | "runs" | "agent" | "fact" | "issue" | "trace" | "live"
 export interface View {
   kind: ViewKind
   id: string
@@ -38,6 +38,10 @@ interface State {
   chatAgent: string | null
   /** the end-of-session report is open */
   reportOpen: boolean
+  /** project folder whose workspace (every agent working in it) is open */
+  workspace: string | null
+  /** the "new project" dialog */
+  newProjectOpen: boolean
   /** event picked in the chat, lit up on the graph */
   highlight: string | null
   searchOpen: boolean
@@ -70,6 +74,8 @@ type Action =
   | { type: "graphView"; view: GraphView }
   | { type: "chatAgent"; agent: string | null }
   | { type: "report"; open: boolean }
+  | { type: "workspace"; folder: string | null }
+  | { type: "newProject"; open: boolean }
   | { type: "load"; issues: Issue[]; calls: MekoCall[]; runId: string; sameRun: boolean }
   | { type: "access"; open: boolean }
   | { type: "session"; agent: string; sessionId: string | null }
@@ -91,6 +97,8 @@ const initial: State = {
   graphView: "panel",
   chatAgent: null,
   reportOpen: false,
+  workspace: null,
+  newProjectOpen: false,
   highlight: null,
   searchOpen: false,
   source: "sample",
@@ -176,6 +184,10 @@ function reducer(s: State, a: Action): State {
       return { ...s, graphView: a.view }
     case "chatAgent":
       return { ...s, chatAgent: a.agent }
+    case "newProject":
+      return { ...s, newProjectOpen: a.open }
+    case "workspace":
+      return { ...s, workspace: a.folder, panelTab: a.folder ? "chat" : s.panelTab }
     case "report":
       return { ...s, reportOpen: a.open, playing: a.open ? false : s.playing, replayN: a.open ? EVENTS.length : s.replayN }
     case "load": {
@@ -231,6 +243,9 @@ interface Tower {
   setGraphView: (view: GraphView) => void
   setChatAgent: (agent: string | null) => void
   setReportOpen: (open: boolean) => void
+  /** open the workspace of a project folder (null closes it) */
+  openWorkspace: (folder: string | null) => void
+  setNewProjectOpen: (open: boolean) => void
 }
 
 const TowerContext = createContext<Tower | null>(null)
@@ -260,6 +275,8 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   const setGraphView = useCallback((view: GraphView) => dispatch({ type: "graphView", view }), [])
   const setChatAgent = useCallback((agent: string | null) => dispatch({ type: "chatAgent", agent }), [])
   const setReportOpen = useCallback((open: boolean) => dispatch({ type: "report", open }), [])
+  const openWorkspace = useCallback((folder: string | null) => dispatch({ type: "workspace", folder }), [])
+  const setNewProjectOpen = useCallback((open: boolean) => dispatch({ type: "newProject", open }), [])
   const setAccessOpen = useCallback((open: boolean) => dispatch({ type: "access", open }), [])
 
   /** Load a run from the backend (the newest when runId is omitted). Falls back to the sample if it's down. */
@@ -462,8 +479,8 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   }, [state.searchOpen])
 
   const value = useMemo(
-    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen }),
-    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen],
+    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen, openWorkspace, setNewProjectOpen }),
+    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen, openWorkspace, setNewProjectOpen],
   )
   return <TowerContext.Provider value={value}>{children}</TowerContext.Provider>
 }

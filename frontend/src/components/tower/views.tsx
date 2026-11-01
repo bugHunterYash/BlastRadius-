@@ -3,6 +3,7 @@
 import { Icon } from "@/components/ui/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { isSyncedRun } from "@/lib/api"
 import { isOpen, latestVersion } from "@/lib/graph"
 import { cap, clock, FIX_LABEL, ISSUE_LABEL } from "@/lib/format"
 import { AGENT_ROLES, DESIGN, EVENTS, HEADLINE_TRACE, PRIOR, PROVIDERS, RUNS } from "@/lib/data"
@@ -132,7 +133,7 @@ export function RunsView() {
         <Para>Every run of the content team, newest first.</Para>
       </header>
       <Rows>
-        {RUNS.map((r) => (
+        {RUNS.filter((r) => !isSyncedRun(r.run_id)).map((r) => (
           <Row
             key={r.run_id}
             onClick={() => go("run", r.run_id)}

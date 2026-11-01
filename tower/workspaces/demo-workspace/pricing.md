@@ -1,7 +1,6 @@
 # Pricing sheet - Aqua bottle launch
 
-Prices are in Indian rupees, written as "Rs." so every shell reads them the same way.
-(Windows PowerShell 5.1 reads UTF-8 files without a BOM as ANSI and garbles the rupee sign.)
+Prices are in Indian rupees (Rs.).
 
 | Item | Price | Updated |
 |---|---|---|

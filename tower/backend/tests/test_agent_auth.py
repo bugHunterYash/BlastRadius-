@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.runtime import auth
 from tests.fakes import FAKE_CODEX
+from tests.conftest import NO_TOKEN
 
 AUTH = {"Authorization": "Bearer test-token"}
 FAKE_CLI = Path(__file__).with_name("fake_claude_cli.py")
@@ -45,8 +46,8 @@ def wait_login(c, provider, timeout=15):
 
 
 def test_auth_endpoints_need_the_token(client):
-    assert client.get("/v1/agents/auth").status_code == 401
-    assert client.post("/v1/agents/auth/claude/login").status_code == 401
+    assert client.get("/v1/agents/auth", headers=NO_TOKEN).status_code == 401
+    assert client.post("/v1/agents/auth/claude/login", headers=NO_TOKEN).status_code == 401
     assert client.post("/v1/agents/auth/gemini/login", headers=AUTH).status_code == 422
 
 

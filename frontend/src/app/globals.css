@@ -88,6 +88,8 @@
   --flag-soft: #fee2e2;
   --mint: #059669;
   --dots: #d3dbd6;
+  --grid-minor: #e9eeeb;
+  --grid-major: #d5ddd8;
   --paper: #fbfcfb;
   --ink: #2b3a33;
   /* colour code per agent: always the same hue on the graph, in the chat and in the activity strip */
@@ -95,6 +97,7 @@
   --agent-writer: #db2777;
   --agent-reviewer: #ea580c;
   --agent-publisher: #0891b2;
+  --agent-analyst: #7c3aed;
   --agent-you: #12201a;
   --ripple: #ef4444;
   --chart-1: #059669;
@@ -140,12 +143,15 @@
   --flag-soft: #3a1717;
   --mint: #34d399;
   --dots: #222838;
+  --grid-minor: #181d27;
+  --grid-major: #252c3a;
   --paper: #11141b;
   --ink: #d9dce6;
   --agent-researcher: #3b82f6;
   --agent-writer: #ec4899;
   --agent-reviewer: #ea580c;
   --agent-publisher: #0d9488;
+  --agent-analyst: #a78bfa;
   --agent-you: #e8ebf2;
   --ripple: #f87171;
   --chart-1: #34d399;
@@ -262,4 +268,37 @@
 /* the "Memory names" toggle on the graph */
 .hide-labels .fact-label {
   display: none;
+}
+
+/* Session report as a PDF (Download PDF uses the browser's print-to-PDF): only the report, on A4 */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: var(--background) !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .tower,
+  [data-sonner-toaster],
+  [data-slot="sheet-content"],
+  [data-slot="sheet-overlay"],
+  [role="dialog"]:not([data-report-root]) {
+    display: none !important;
+  }
+  [data-report-root] {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .report-block {
+    break-inside: avoid;
+  }
 }

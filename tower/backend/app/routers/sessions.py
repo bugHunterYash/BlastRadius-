@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
-from app import session_import
+from app import live_sync, projects, session_import
 from app.routers.agents import require_api_token
 
 router = APIRouter(tags=["claude code sessions"])
@@ -39,3 +39,34 @@ async def import_session(session_id: str, response: Response, body: ImportBody |
     return {"invocation_id": inv["invocation_id"], "run_id": inv["run_id"], "created": created,
             "status": inv["status"], "runtime": inv["runtime"], "events": inv["last_sequence"],
             "title": (inv.get("metadata") or {}).get("title")}
+
+
+@router.get("/v1/live/sessions", dependencies=[Depends(require_api_token)])
+async def live_sessions(limit: int = Query(30, ge=1, le=200)):
+    """Chats synced live from the Claude app / Claude Code and the Codex app, newest first."""
+    return await live_sync.live_sessions(limit)
+
+
+@router.post("/v1/live/sync", dependencies=[Depends(require_api_token)])
+async def sync_now():
+    """Run one sync pass now instead of waiting for the next tick."""
+    return {"changes": await live_sync.sync_once()}
+
+
+class ProjectBody(BaseModel):
+    path: str = Field(min_length=1, max_length=1000)
+
+
+@router.get("/v1/projects", dependencies=[Depends(require_api_token)])
+async def list_projects():
+    """Project folders agents can be assigned work in."""
+    return await projects.list_projects()
+
+
+@router.post("/v1/projects", status_code=201, dependencies=[Depends(require_api_token)])
+async def add_project(body: ProjectBody):
+    """Add a project folder (only one where a synced agent session already works). Idempotent."""
+    try:
+        return await projects.register(body.path)
+    except projects.ProjectError as exc:
+        raise HTTPException(422, str(exc)) from exc

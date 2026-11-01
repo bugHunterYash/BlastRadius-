@@ -20,6 +20,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
+from app.runtime.antigravity_cli import agy_path, models_check
 from app.runtime.base import RuntimeError_
 from app.runtime.claude_sdk import cli_path
 from app.runtime.codex_app_server import CLIENT_INFO, JsonRpcConnection, codex_argv
@@ -99,6 +100,16 @@ async def codex_status() -> dict:
             "subscription": account.get("planType") if account else None}
 
 
+async def antigravity_status() -> dict:
+    """Antigravity signs in with Google inside its own app; the tower only checks that the CLI is signed in."""
+    exe = agy_path()
+    if not exe:
+        return {"provider": "antigravity", "logged_in": False, "auth_method": None, "detail": "Antigravity CLI (agy) not found"}
+    ok, detail = await models_check([exe])
+    return {"provider": "antigravity", "logged_in": ok, "auth_method": "google" if ok else None,
+            "detail": None if ok else detail}
+
+
 STATUS_TTL_S = 15.0
 _status_cache: tuple[float, dict] | None = None
 
@@ -114,14 +125,14 @@ async def status() -> dict:
     global _status_cache
     now = asyncio.get_running_loop().time()
     if _status_cache and now - _status_cache[0] < STATUS_TTL_S:
-        claude, codex = (dict(v) for v in _status_cache[1])
+        claude, codex, agy = (dict(v) for v in _status_cache[1])
     else:
-        claude, codex = await asyncio.gather(claude_status(), codex_status())
-        _status_cache = (now, (dict(claude), dict(codex)))
-    for s in (claude, codex):
+        claude, codex, agy = await asyncio.gather(claude_status(), codex_status(), antigravity_status())
+        _status_cache = (now, (dict(claude), dict(codex), dict(agy)))
+    for s in (claude, codex, agy):
         session = _sessions.get(s["provider"])
         s["login"] = session.public() if session else None
-    return {"claude": claude, "codex": codex}
+    return {"claude": claude, "codex": codex, "antigravity": agy}
 
 
 # ---------- Claude login ----------

@@ -18,10 +18,11 @@ router = APIRouter(tags=["agent runtime"])
 
 
 def require_api_token(authorization: str = Header(default="")) -> None:
-    """Invoking or cancelling an agent runs code, so it needs a token (TOWER_API_TOKEN, else the ingest token)."""
-    expected = settings.TOWER_API_TOKEN or settings.TOWER_INGEST_TOKEN
-    token = authorization.removeprefix("Bearer ").strip()
-    if not hmac.compare_digest(token.encode(), expected.encode()):
+    """Every API route but health and event ingest needs a token: TOWER_API_TOKEN, or the ingest token.
+    Prompts, answers and synced chats are private, and invoking an agent runs code."""
+    token = authorization.removeprefix("Bearer ").strip().encode()
+    allowed = [t for t in (settings.TOWER_API_TOKEN, settings.TOWER_INGEST_TOKEN) if t]
+    if not token or not any(hmac.compare_digest(token, t.encode()) for t in allowed):
         raise HTTPException(401, "bad or missing API token")
 
 
@@ -61,7 +62,8 @@ async def providers_health():
     """Real checks: each runtime starts and handshakes, Ollama answers and has the model, Postgres answers,
     Meko lists its tools. Configuration alone never counts as available."""
     rt = agent_router.registry()
-    claude, codex = await asyncio.gather(rt["claude_agent_sdk"].health(), rt["codex_app_server"].health())
+    claude, codex, agy = await asyncio.gather(rt["claude_agent_sdk"].health(), rt["codex_app_server"].health(),
+                                              rt["antigravity_cli"].health())
 
     ollama = {"available": False, "model": settings.OLLAMA_MODEL or None}
     try:
@@ -81,14 +83,14 @@ async def providers_health():
     if settings.notebook_mode == "meko":
         try:
             tools = await asyncio.wait_for(meko_client.list_meko_tools(), 15)
-            meko = {"mode": "meko", "available": True, "tools": tools}
+            meko = {"mode": "meko", "available": True, "tools": tools, **await asyncio.wait_for(meko_client.meko_info(), 15)}
         except Exception as exc:
             meko = {"mode": "meko", "available": False, "detail": repr(exc)}
     else:
         meko = {"mode": "local", "available": False,
                 "detail": "MEKO_MCP_URL not set; the local notebook table stands in for the Datapack"}
 
-    return {"claude": claude.model_dump(), "codex": codex.model_dump(), "ollama": ollama,
+    return {"claude": claude.model_dump(), "codex": codex.model_dump(), "antigravity": agy.model_dump(), "ollama": ollama,
             "summarizer": summarizer.label(), "postgres": pg, "meko": meko,
             "replay": (await rt["replay"].health()).model_dump(),
             "max_concurrency": settings.AGENT_MAX_CONCURRENCY}

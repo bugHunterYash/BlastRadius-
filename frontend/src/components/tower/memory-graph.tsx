@@ -485,7 +485,9 @@ export function MemoryGraph({ showReads = true, showHandoffs = true, showLabels 
         maxZoom={2}
         aria-label={`Memory graph of ${state.runId}: ${DESIGN.agents.length} agents and the facts they read and write`}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1.3} color="var(--dots)" />
+        {/* graph paper: fine lines every 24px, stronger ones every 120px */}
+        <Background id="minor" variant={BackgroundVariant.Lines} gap={24} lineWidth={0.6} color="var(--grid-minor)" />
+        <Background id="major" variant={BackgroundVariant.Lines} gap={120} lineWidth={1} color="var(--grid-major)" />
         <Controls position="bottom-right" showInteractive={false} />
       </ReactFlow>
     </div>

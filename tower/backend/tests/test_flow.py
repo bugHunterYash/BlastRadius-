@@ -10,6 +10,7 @@ import uuid
 import pytest
 import yaml
 from fastapi.testclient import TestClient
+from tests.conftest import NO_TOKEN
 
 AUTH = {"Authorization": "Bearer test-token"}
 
@@ -96,7 +97,7 @@ def clean_run(client, run_id):
 def test_ingest_needs_the_token(client):
     body = {"event_id": str(uuid.uuid4()), "run_id": "x", "agent": "a", "op": "run_start",
             "ts": dt.datetime.now(dt.timezone.utc).isoformat()}
-    assert client.post("/v1/events", json=body).status_code == 401
+    assert client.post("/v1/events", json=body, headers=NO_TOKEN).status_code == 401
     assert client.post("/v1/events", json=body, headers={"Authorization": "Bearer nope"}).status_code == 401
 
 

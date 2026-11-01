@@ -5,8 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-Provider = Literal["claude", "codex", "replay"]
-RuntimeName = Literal["claude_agent_sdk", "codex_app_server", "replay"]
+Provider = Literal["claude", "codex", "antigravity", "replay"]
+RuntimeName = Literal["claude_agent_sdk", "codex_app_server", "antigravity_cli", "replay"]
 Status = Literal["queued", "running", "completed", "failed", "cancelled", "timeout"]
 
 # Normalized event types. Adapters emit these; the API publishes them on SSE as "agent.<type>".
@@ -27,6 +27,7 @@ class InvokeRequest(BaseModel):
     why: str | None = Field(default=None, max_length=500)
     workspace_id: str | None = Field(default=None, max_length=100)
     session_id: uuid.UUID | None = None          # continue an earlier session of this agent
+    read_only: bool = False                      # this task may only read, whatever the design allows
     idempotency_key: str | None = Field(default=None, max_length=200)
 
 
@@ -56,7 +57,7 @@ class RuntimeRequest(BaseModel):
     prompt: str
     why: str | None
     route: AgentRoute
-    resume_provider_session_id: str | None = None  # Claude session id / Codex thread id
+    resume_provider_session_id: str | None = None  # Claude session / Codex thread / Antigravity conversation
 
 
 class RuntimeEvent(BaseModel):

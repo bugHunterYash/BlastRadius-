@@ -30,7 +30,8 @@ os.environ.update(
     DATABASE_URL=TEST_URL, AGENT_CONFIG_DIR=str(CONFIG_DIR), OLLAMA_MODEL="", ANTHROPIC_API_KEY="",
     MEKO_MCP_URL="", TOWER_INGEST_TOKEN="test-token", TOWER_API_TOKEN="", APPLY_GIT_COMMIT="false",
     AGENT_WORKSPACE_ROOT=str(WORKSPACES), AGENT_WORKSPACES="", CLAUDE_RUNTIME_ENABLED="true",
-    CODEX_RUNTIME_ENABLED="true", REPLAY_RUNTIME_ENABLED="false", CLAUDE_AGENT_MODEL="", CODEX_MODEL="",
+    CODEX_RUNTIME_ENABLED="true", REPLAY_RUNTIME_ENABLED="false", CLAUDE_AGENT_MODEL="", CODEX_MODEL="", LIVE_SYNC_ENABLED="false",
+    ANTIGRAVITY_BIN=str(WORKSPACES / "no-agy"), ANTIGRAVITY_DIR=str(WORKSPACES / "no-antigravity"),
 )
 
 
@@ -69,3 +70,18 @@ def config_dir():
 @pytest.fixture
 def workspaces():
     return WORKSPACES
+
+
+# Every API route but health and ingest needs the API token, so test clients send it by default.
+# A test checks the 401 by sending NO_TOKEN instead.
+NO_TOKEN = {"Authorization": ""}
+from fastapi.testclient import TestClient as _TestClient  # noqa: E402
+
+_client_init = _TestClient.__init__
+
+
+def _client_with_token(self, *args, headers=None, **kwargs):
+    _client_init(self, *args, headers={"Authorization": "Bearer test-token", **(headers or {})}, **kwargs)
+
+
+_TestClient.__init__ = _client_with_token

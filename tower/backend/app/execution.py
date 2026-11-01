@@ -31,6 +31,21 @@ def start() -> None:
     _cancel_requested.clear()
 
 
+async def recover_interrupted() -> int:
+    """Tasks still queued or running when the server starts can't still be running: their process died
+    with the old server (a crash, out of memory, a restart). Mark them failed, with the reason in their
+    timeline, so they don't show as "running" forever. Chats synced from other apps aren't touched."""
+    rows = await db.pool.fetch(
+        """UPDATE agent_invocations SET status = 'failed', completed_at = clock_timestamp(),
+                  error_message = 'Interrupted: the Control Tower server stopped while this task was running'
+           WHERE status IN ('queued', 'running') AND runtime IN ('claude_agent_sdk', 'codex_app_server', 'antigravity_cli', 'replay')
+           RETURNING invocation_id""")
+    for r in rows:
+        await xdb.append_events_bulk(str(r["invocation_id"]), [("invocation.failed", None, {
+            "error": "Interrupted: the Control Tower server stopped while this task was running", "recovered": True})])
+    return len(rows)
+
+
 async def shutdown() -> None:
     for iid in list(_tasks):
         await cancel(iid)
@@ -57,7 +72,7 @@ async def record(inv: dict, event_type: str, why: str | None = None, payload: di
 async def submit(agent_id: str, body: InvokeRequest) -> tuple[dict, bool]:
     """Validate, route and queue an invocation. Returns (invocation, created). Raises RoutingError."""
     design = await db.get_design()
-    route = router.resolve(agent_id, design, body.workspace_id, await xdb.active_design_id())
+    route = router.resolve(agent_id, design, body.workspace_id, await xdb.active_design_id(), body.read_only)
     runtime = router.registry().get(route.runtime)
     if runtime is None:
         raise router.RoutingError(503, f"runtime {route.runtime!r} is not available")

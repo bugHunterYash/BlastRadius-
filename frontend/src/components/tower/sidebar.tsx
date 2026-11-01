@@ -4,16 +4,21 @@ import { Icon } from "@/components/ui/icon"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { isSyncedRun } from "@/lib/api"
 import { isOpen, latestVersion } from "@/lib/graph"
 import { cap } from "@/lib/format"
 import { AGENT_META, DATAPACK, DESIGN, EVENTS, FACTS, PRIOR, PROVIDERS, RUNS } from "@/lib/data"
-import { AgentAvatar, runtimeLine } from "./runtime-logo"
+import { LiveDot, sessionTitle, useLiveSessions } from "./live-sessions"
+import { folderName, projectsOf } from "./project-workspace"
+import { AgentAvatar, RuntimeMark, runtimeLine } from "./runtime-logo"
 import { seenIssues, useTower, type ViewKind } from "./tower-store"
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { state, go, setAccessOpen } = useTower()
+  const { state, go, setAccessOpen, openWorkspace, setNewProjectOpen } = useTower()
   const { resolvedTheme, setTheme } = useTheme()
   const open = seenIssues(state).filter(isOpen)
+  const live = useLiveSessions(state.source === "live", 60)
+  const projects = projectsOf(live).slice(0, 5)
   const nav = (kind: ViewKind, id: string) => {
     go(kind, id)
     onNavigate?.()
@@ -23,7 +28,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const NAV: { kind: ViewKind; id: string; icon: string; label: string; count?: number; flag?: boolean }[] = [
     { kind: "run", id: state.runId, icon: "hub", label: "Overview" },
     { kind: "issues", id: "all", icon: "error", label: "Issues", count: open.length || undefined, flag: true },
-    { kind: "runs", id: "all", icon: "history", label: "Runs", count: RUNS.length },
+    { kind: "runs", id: "all", icon: "history", label: "Runs", count: RUNS.filter((r) => !isSyncedRun(r.run_id)).length },
   ]
 
   return (
@@ -34,6 +39,19 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <span className="text-[15px] font-bold">Control Tower</span>
       </div>
+
+      <Button
+        className="mb-3 h-9 justify-start gap-2 rounded-lg bg-cobalt px-2.5 text-[14.5px] font-semibold text-white hover:bg-cobalt/90"
+        disabled={state.source !== "live"}
+        title={state.source === "live" ? undefined : "Start the backend to create projects"}
+        onClick={() => {
+          setNewProjectOpen(true)
+          onNavigate?.()
+        }}
+      >
+        <Icon name="add" size={20} />
+        New project
+      </Button>
 
       <nav className="flex flex-col gap-px">
         {NAV.map(({ kind, id, icon, label, count, flag }) => (
@@ -62,6 +80,35 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           )
         })}
       </Group>
+
+      {projects.length > 0 && (
+        <Group title="Workspaces">
+          {projects.map((p) => (
+            <Item key={p.folder} on={state.workspace === p.folder} onClick={() => { openWorkspace(p.folder); onNavigate?.() }}>
+              <Icon name="folder_open" size={19} />
+              <span className="truncate" title={p.folder}>{folderName(p.folder)}</span>
+              <span className="ml-auto flex items-center gap-1 pl-1 text-[12.5px] text-muted-foreground tabular-nums">
+                {p.live > 0 && <LiveDot on />}
+                {p.sessions.length}
+              </span>
+            </Item>
+          ))}
+        </Group>
+      )}
+
+      {live.length > 0 && (
+        <Group title="Live sessions">
+          {live.slice(0, 8).map((s) => (
+            <Item key={s.invocation_id} on={active("live", s.invocation_id)} onClick={() => nav("live", s.invocation_id)}>
+              <RuntimeMark provider={s.provider} className="size-[18px] shrink-0" />
+              <span className="truncate" title={sessionTitle(s)}>{sessionTitle(s)}</span>
+              <span className="ml-auto pl-1">
+                <LiveDot on={s.status === "running"} />
+              </span>
+            </Item>
+          ))}
+        </Group>
+      )}
 
       <Group title="Facts">
         {FACTS().map((f) => (

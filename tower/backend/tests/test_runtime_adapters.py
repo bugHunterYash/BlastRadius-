@@ -3,12 +3,15 @@
 import asyncio
 import json
 import os
+import sys
 import uuid
+from pathlib import Path
 
 import pytest
 
 from app.config import settings
 from app.runtime import router, workspace
+from app.runtime.antigravity_cli import AntigravityRuntime
 from app.runtime.claude_sdk import ClaudeRuntime, make_permission_check
 from app.runtime.codex_app_server import CodexRuntime, JsonRpcConnection
 from app.runtime.models import RuntimeRequest
@@ -311,3 +314,47 @@ def test_secrets_are_redacted_and_text_is_capped():
                   "auth": "Bearer abcdefghijklmnopqrstuvwxyz123"})
     assert "sk-ant-" not in json.dumps(out) and "abcdefghijklmnop" not in json.dumps(out) and out["n"] == 3
     assert redact_text("x" * 50, limit=10).startswith("x" * 10 + "... [truncated 40")
+
+
+# ---------- antigravity ----------
+
+AGY_DESIGN = {"agents": ["analyst"], "runtimes": {"analyst": {"provider": "antigravity", "workspace_id": "demo-workspace"}}}
+FAKE_AGY = [sys.executable, str(Path(__file__).with_name("fake_agy.py"))]
+
+
+def test_antigravity_agent_routes_to_the_cli():
+    route = router.resolve("analyst", AGY_DESIGN)
+    assert (route.provider, route.runtime) == ("antigravity", "antigravity_cli")
+    assert route.permissions == {"read": True, "write": False, "execute": False}
+
+
+def test_antigravity_adapter_captures_the_turn(monkeypatch, tmp_path):
+    log = tmp_path / "argv.json"
+    monkeypatch.setenv("FAKE_AGY_LOG", str(log))
+    sink = Sink()
+    req = request_for("analyst", "Check the launch price", design=AGY_DESIGN)
+    result = asyncio.run(AntigravityRuntime(FAKE_AGY).invoke(req, sink))
+
+    argv = json.loads(log.read_text())
+    prompt = argv[argv.index("-p") + 1]
+    assert "Shell commands are not available" in prompt and prompt.endswith("Task: Check the launch price")
+    assert "--output-format" in argv and "--mode" not in argv          # read-only: no auto-accepted edits
+    assert "--dangerously-skip-permissions" not in argv
+    assert sink.types() == ["session.started", "message.delta", "message.delta", "message.completed", "usage.updated",
+                            "tool.started", "tool.completed", "message.delta", "message.completed"]
+    assert sink.first("tool.started").why == "Reading the pricing file."
+    assert result.status == "completed" and result.final_response == "The price is Rs. 549."
+    assert result.provider_thread_id == "conv-test-1" and (result.input_tokens, result.output_tokens) == (120, 12)
+
+    # a follow-up continues the same conversation
+    resumed = asyncio.run(AntigravityRuntime(FAKE_AGY).invoke(req.model_copy(update={"resume_provider_session_id": "conv-9"}), Sink()))
+    assert resumed.provider_thread_id == "conv-9" and "--conversation" in json.loads(log.read_text())
+
+
+def test_antigravity_denied_command_fails_with_a_reason(monkeypatch):
+    monkeypatch.setenv("FAKE_AGY_MODE", "fail")
+    sink = Sink()
+    result = asyncio.run(AntigravityRuntime(FAKE_AGY).invoke(request_for("analyst", design=AGY_DESIGN), sink))
+    assert result.status == "failed" and "no output" in result.error_message
+    assert sink.first("command.completed").payload["status"] == "failed"
+    assert sink.first("approval.decided").payload["decision"] == "decline"
