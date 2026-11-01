@@ -95,7 +95,8 @@ and later runs a real chaos test under load as the Pro tier.
 `live-sessions.tsx`, `agent-access.tsx`, `sidebar.tsx`, `tower-store.tsx` (state).
 `lib/api.ts` (all API calls), `lib/data.ts` (live data bindings).
 
-**Routes:** `/` is free for the landing page (today it redirects to `/dashboard`); the app is at
+**Routes:** `/` is the landing page (`components/landing/`, merged from `feat/landing-redesign-and-polish`; its
+"TRY IT" buttons open `/dashboard`, "Log in" opens `/login`; `/tower` redirects to `/dashboard`); the app is at
 **`/dashboard`**; `/login` is the sign-in page. A landing page's "Log in" / "Try it out" button should link to
 `/dashboard` (it sends people to `/login` first when sign-in is on, and back after).
 
