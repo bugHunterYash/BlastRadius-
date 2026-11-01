@@ -19,7 +19,7 @@ export const DESIGN: DesignSpec = {
  * What the agents were building. The session report reads this to speak in the project's own terms:
  * its phases, what the deliverable is called, and which agent owns each phase.
  */
-export type ProjectKind = "content" | "website" | "training" | "finetune"
+export type ProjectKind = "content" | "website" | "software" | "research" | "training" | "finetune" | "run"
 
 export interface ProjectPhase {
   id: string
@@ -39,6 +39,9 @@ export interface Project {
 export const PROJECT_TEMPLATES: Record<ProjectKind, { label: string; deliverable: string; phases: string[] }> = {
   content: { label: "Content pipeline", deliverable: "post", phases: ["Research", "Draft", "Review", "Publish"] },
   website: { label: "Website build", deliverable: "site", phases: ["Design", "Build", "Test", "Deploy"] },
+  software: { label: "Software change", deliverable: "change", phases: ["Research", "Plan", "Review", "Ship"] },
+  research: { label: "Research", deliverable: "findings", phases: ["Gather", "Analyse", "Review", "Report"] },
+  run: { label: "Agent run", deliverable: "work", phases: [] },
   training: { label: "Agent training", deliverable: "agent", phases: ["Collect data", "Train", "Evaluate", "Ship"] },
   finetune: { label: "Model fine-tune", deliverable: "model", phases: ["Prepare data", "Fine-tune", "Evaluate", "Release"] },
 }

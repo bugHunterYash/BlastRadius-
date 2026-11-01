@@ -1,0 +1,40 @@
+{
+  "name": "no-conflict-after-read",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹499"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "facts by researcher"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "price"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "price",
+      "value": "price by writer"
+    }
+  ],
+  "expect": [
+    {
+      "type": "permission_leak",
+      "agent": "writer",
+      "fact_key": "price"
+    }
+  ]
+}

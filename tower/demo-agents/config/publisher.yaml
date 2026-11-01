@@ -1,0 +1,4 @@
+agent: publisher
+prompt: "Publish the reviewed draft. Double-check facts before publishing."
+handoff_rule: "start when reviewer hands off"
+routing: "done"

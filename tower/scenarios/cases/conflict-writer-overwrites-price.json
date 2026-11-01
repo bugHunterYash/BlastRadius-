@@ -1,0 +1,40 @@
+{
+  "name": "conflict-writer-overwrites-price",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹499"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "facts by researcher"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹599"
+    }
+  ],
+  "expect": [
+    {
+      "type": "conflict",
+      "agent": "writer",
+      "fact_key": "price"
+    },
+    {
+      "type": "permission_leak",
+      "agent": "writer",
+      "fact_key": "price"
+    }
+  ]
+}

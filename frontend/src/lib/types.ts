@@ -70,7 +70,19 @@ export interface Run {
  * One logged Meko call, as the swarm view shows it: a note written into a datapack, a recall,
  * a directive from one agent to another, a promotion to shared knowledge, or a person's approval.
  */
-export type CallKind = "note" | "recall" | "directive" | "promotion" | "approval" | "error"
+export type CallKind =
+  | "note" | "recall" | "directive" | "promotion" | "approval" | "error" | "task" | "answer"
+  // what an agent's runtime did, from the execution capture (GET /v1/invocations/{id}/events)
+  | "prompt" | "thought" | "tool" | "command" | "file" | "result"
+
+/** Extra detail on execution steps: the runtime's own status, the public "why", and the invocation. */
+export interface ExecInfo {
+  invocation_id: string
+  status?: "ok" | "failed" | "running"
+  /** exit code, tool output head, or the file diff kind */
+  detail?: string
+  why?: string | null
+}
 
 export interface MekoCall {
   call_id: string
@@ -85,6 +97,8 @@ export interface MekoCall {
   text: string
   /** the memory event this call produced, when there is one */
   event_id?: string
+  /** set on steps that came from an agent runtime (tool calls, commands, messages) */
+  exec?: ExecInfo
 }
 
 /** A value saved before the run started (the backend's prior_versions). */

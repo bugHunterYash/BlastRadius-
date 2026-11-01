@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BlastRadius Pricing</title>
+<style>
+  :root { --bg:#0B0E14; --panel:#121722; --panel2:#171D2A; --line:#242B3A; --text:#E6E8EB; --muted:#8A8F98; --accent:#E8743B; --ok:#3FB950; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { width:1600px; height:800px; overflow:hidden; background:var(--bg); color:var(--text); font:15px/1.5 "Segoe UI", system-ui, sans-serif; padding:44px 64px; }
+  .muted { color:var(--muted); }
+  .head { text-align:center; }
+  .head .brand { color:var(--accent); font-weight:800; letter-spacing:.08em; font-size:13px; }
+  h1 { font-size:40px; font-weight:800; margin-top:8px; letter-spacing:-.02em; }
+  .head p { font-size:17px; margin-top:6px; }
+  .grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:20px; margin-top:34px; }
+  .c { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:26px 24px; display:flex; flex-direction:column; position:relative; }
+  .c.hot { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset, 0 20px 50px rgba(232,116,59,.12); }
+  .badge { position:absolute; top:-12px; left:24px; background:var(--accent); color:#fff; font-size:12px; font-weight:800; padding:3px 10px; border-radius:999px; }
+  .name { font-size:20px; font-weight:800; }
+  .for { font-size:13.5px; color:var(--muted); margin-top:2px; min-height:40px; }
+  .price { font-size:38px; font-weight:800; margin-top:10px; letter-spacing:-.02em; }
+  .price small { font-size:14px; font-weight:500; color:var(--muted); letter-spacing:0; }
+  .usd { font-size:13px; color:var(--muted); min-height:20px; }
+  .cta { margin:18px 0 18px; text-align:center; padding:11px; border-radius:11px; font-weight:700; border:1px solid var(--line); background:var(--panel2); }
+  .hot .cta { background:var(--accent); border-color:var(--accent); color:#fff; }
+  ul { list-style:none; display:flex; flex-direction:column; gap:9px; font-size:14px; }
+  li::before { content:"✓"; color:var(--ok); font-weight:800; margin-right:9px; }
+  li.plus::before { content:"+"; color:var(--accent); }
+  .foot { display:flex; justify-content:center; gap:40px; margin-top:30px; font-size:14px; }
+  .foot b { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="head">
+  <div class="brand">◆ BLASTRADIUS PRICING</div>
+  <h1>Free on your laptop. Paid when your team needs proof.</h1>
+  <p class="muted">Tests run on your machine or your CI, so the local tool stays free forever.</p>
+</div>
+
+<div class="grid">
+  <div class="c">
+    <div class="name">Free</div>
+    <div class="for">Students, solo devs, hackathon teams</div>
+    <div class="price">₹0 <small>forever</small></div>
+    <div class="usd">Open source</div>
+    <div class="cta">npm install -g blastx</div>
+    <ul>
+      <li>CLI + local dashboard</li>
+      <li>Unlimited fault + traffic tests</li>
+      <li>Statistical evidence reports</li>
+      <li>AI agent with your own Gemini key</li>
+      <li>Local report history</li>
+    </ul>
+  </div>
+
+  <div class="c hot">
+    <span class="badge">MOST POPULAR</span>
+    <div class="name">Pro</div>
+    <div class="for">Indie devs and freelancers shipping real apps</div>
+    <div class="price">₹699 <small>/ dev / month</small></div>
+    <div class="usd">~ $9</div>
+    <div class="cta">Start 14-day trial</div>
+    <ul>
+      <li class="plus">Everything in Free</li>
+      <li>Built-in AI agent, no key (300 runs/mo)</li>
+      <li>Shareable report link + PDF</li>
+      <li>GitHub Action: fail PRs that break resilience</li>
+      <li>Nightly scheduled tests</li>
+      <li>Slack / Discord alerts</li>
+      <li>Cloud history, 90 days</li>
+    </ul>
+  </div>
+
+  <div class="c">
+    <div class="name">Team</div>
+    <div class="for">Startups and product teams</div>
+    <div class="price">₹3,999 <small>/ month</small></div>
+    <div class="usd">~ $49 · up to 10 devs</div>
+    <div class="cta">Start 14-day trial</div>
+    <ul>
+      <li class="plus">Everything in Pro</li>
+      <li>Shared workspace + roles</li>
+      <li>Test remote staging (Docker over SSH)</li>
+      <li>Compare runs across branches / PRs</li>
+      <li>Audit log</li>
+      <li>1,500 AI runs/mo · 1-year history</li>
+    </ul>
+  </div>
+
+  <div class="c">
+    <div class="name">Enterprise</div>
+    <div class="for">Companies with compliance needs</div>
+    <div class="price">Custom</div>
+    <div class="usd">from ₹2L / year</div>
+    <div class="cta">Talk to us</div>
+    <ul>
+      <li class="plus">Everything in Team</li>
+      <li>Self-hosted, on-prem LLM option</li>
+      <li>SSO / SAML</li>
+      <li>DR-test evidence pack for audits</li>
+      <li>Kubernetes support (roadmap)</li>
+      <li>Priority support + SLA</li>
+    </ul>
+  </div>
+</div>
+
+<div class="foot muted">
+  <span><b>Resilience Audit</b> · we test your app before launch or fundraise · ₹25k–50k one-time</span>
+  <span><b>Education</b> · Pro free for colleges and hackathons</span>
+</div>
+</body>
+</html>

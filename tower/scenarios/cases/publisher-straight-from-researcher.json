@@ -1,0 +1,29 @@
+{
+  "name": "publisher-straight-from-researcher",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "price by researcher"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "publisher"
+    },
+    {
+      "agent": "publisher",
+      "op": "write",
+      "fact_key": "published",
+      "value": "published by publisher"
+    }
+  ],
+  "expect": [
+    {
+      "type": "skipped_handoff",
+      "agent": "publisher",
+      "fact_key": "published"
+    }
+  ]
+}

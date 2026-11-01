@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BlastRadius CLI Prototype</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1600px; height: 1000px; background: #1c1f26; display: flex; gap: 20px; padding: 24px;
+         font: 14px/1.55 "Cascadia Mono", Consolas, monospace; color: #D7DAE0; overflow: hidden; }
+  .win { background: #0D1017; border: 1px solid #2a2f3a; border-radius: 12px; overflow: hidden;
+         box-shadow: 0 20px 50px rgba(0,0,0,.45); display: flex; flex-direction: column; }
+  .bar { height: 36px; background: #161a22; border-bottom: 1px solid #2a2f3a; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+         font: 12px "Segoe UI", sans-serif; color: #8A8F98; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  pre { padding: 14px 18px; font: inherit; white-space: pre; }
+  .a { color: #E8743B; } .m { color: #8A8F98; } .g { color: #3FB950; } .y { color: #D29922; }
+  .r { color: #F85149; } .b { color: #58A6FF; } .c { color: #2EA0A0; } .w { color: #fff; font-weight: 700; }
+  .sel { background: #E8743B; color: #0D1017; font-weight: 700; padding: 0 4px; }
+  .box { display: inline-block; position: relative; border: 1px solid #E8743B; border-radius: 8px;
+         padding: 10px 14px; margin: 4px 0; vertical-align: top; }
+  .box[data-t]::before { content: attr(data-t); position: absolute; top: -11px; left: 12px;
+         background: #0D1017; padding: 0 6px; color: #E8743B; }
+  .live { background: #12301a; color: #3FB950; font-weight: 700; padding: 0 4px; }
+</style>
+</head>
+<body>
+
+<div class="win" style="width:860px">
+  <div class="bar"><span class="dot" style="background:#F85149"></span><span class="dot" style="background:#D29922"></span><span class="dot" style="background:#3FB950"></span><span style="margin-left:10px">br — fault experiment</span></div>
+<pre><span class="box" style="width:600px"><span class="a">◆</span> <span class="w">BlastRadius</span> <span class="m">v0.1</span>  ·  <span class="m">break it before production does</span>
+
+<span class="m">project</span>  demo-shop <span class="m">(5 services)</span>     <span class="m">api</span>    127.0.0.1:8000 <span class="g">✓</span>
+<span class="m">agent</span>    gemini free tier <span class="g">✓</span>          <span class="m">store</span>  postgres <span class="g">✓</span></span>
+
+<span class="a">❯</span> <span class="w">br run</span> --fault <span class="b">redis:stop</span> --load <span class="b">20rps</span> --baseline 30s --fault-for 30s
+
+  <span class="w">Plan</span>
+  <span class="a">⏺</span> fault      stop <span class="w">redis</span>             <span class="m">(label fault-allowed=true)</span>
+  <span class="a">⏺</span> load       20 rps · open model    <span class="m">(k6 ramping-arrival-rate)</span>
+  <span class="a">⏺</span> phases     30s baseline · 30s fault · 60s recovery
+  <span class="a">⏺</span> SLO        p95 &lt; 500 ms · errors &lt; 1%
+
+  <span class="w">Preflight</span>  <span class="g">9/9 passed</span>
+  <span class="g">✓</span> env=test   <span class="g">✓</span> fault-allowed   <span class="g">✓</span> not production   <span class="g">✓</span> allowlisted
+  <span class="g">✓</span> caps ok    <span class="g">✓</span> no run lock     <span class="g">✓</span> docker + k6      <span class="g">✓</span> restore ready
+
+  Start this experiment?  <span class="sel">❯ Yes, start</span>   <span class="m">No</span>   <span class="m">Edit plan</span>
+
+  <span class="w">exp_7f3c</span>  <span class="live">● LIVE</span>  <span class="c">↻ RECOVERY</span>                        <span class="w">01:15</span> <span class="m">/ 02:00</span>
+  <span class="b">baseline ██████████</span><span class="r">fault ██████████</span><span class="c">recovery ████████</span><span class="m">░░░░░░░░░░░</span>
+
+  <span class="m">rps</span>   <span class="w"> 19.8</span> <span class="m">/ 20</span>     <span class="b">▆▇▆▇▆▇▆▇▆▇▆▇▆▆▆▆▆▆▆▆▆▇▆▇▆▇▆▇▆▇</span>
+  <span class="m">p95</span>   <span class="w">112 ms</span>        <span class="g">▁▁▁▁▁▁▁▁▁▁</span><span class="r">▇▇▇▇▇▇▇▇▇▇</span><span class="y">▅▃▂</span><span class="g">▁▁▁▁▁▁▁</span>   <span class="m">SLO 500</span>
+  <span class="m">err</span>   <span class="w">0.4 %</span>         <span class="g">▁▁▁▁▁▁▁▁▁▁</span><span class="r">██████████</span><span class="y">▃</span><span class="g">▁▁▁▁▁▁▁▁▁</span>   <span class="m">SLO 1%</span>
+
+  <span class="w">Evidence</span> <span class="m">(p &lt; 0.01 + min effect)</span>
+  <span class="m">E1</span> <span class="r">▲</span> api  GET  /api/cart      errors  0.2% → <span class="r">91.0%</span>  <span class="m">n=412 p&lt;0.001</span>
+  <span class="m">E2</span> <span class="r">▲</span> api  GET  /api/cart      p95     82 → <span class="r">870 ms</span>  <span class="m">n=412 p&lt;0.001</span>
+  <span class="m">E3</span> <span class="y">▲</span> api  POST /api/checkout  errors  0.1% → <span class="y">34.5%</span>  <span class="m">n=198 p&lt;0.001</span>
+  <span class="m">E4</span> <span class="g">✓</span> api  GET  /api/products  p95     75 → 79 ms    <span class="m">not significant</span>
+
+  <span class="box" data-t="Result" style="width:560px"><span class="r">✕ SLO breached</span> during fault  <span class="m">(p95, errors)</span>
+<span class="c">↻ recovered</span> in <span class="w">6.2s</span> after redis restored
+blast radius: <span class="w">api</span> /cart, /checkout   <span class="g">safe:</span> /products
+<span class="m">next →</span> br fix exp_7f3c  ·  br report exp_7f3c --open</span>
+  <span class="m">exit 1 (SLO breach)  ·  report saved  ·  redis restored ✓</span></pre>
+</div>
+
+<div class="win" style="flex:1">
+  <div class="bar"><span class="dot" style="background:#F85149"></span><span class="dot" style="background:#D29922"></span><span class="dot" style="background:#3FB950"></span><span style="margin-left:10px">br — capacity + agent</span></div>
+<pre><span class="a">❯</span> <span class="w">br load</span> --target <span class="b">api</span> --baseline <span class="b">20rps</span> --steps <span class="b">1,2,5,10,20</span>
+
+  <span class="w">Traffic Twin</span> <span class="m">· open model · 30s per step · SLO p95&lt;500ms err&lt;1%</span>
+
+  <span class="m">step   target    achieved   p95      errors   SLO</span>
+  <span class="m">────   ───────   ────────   ──────   ──────   ───────────</span>
+  1×      20 rps     20.0      84 ms    0.1%    <span class="g">✓ pass</span>
+  2×      40 rps     39.9      91 ms    0.1%    <span class="g">✓ pass</span>
+  5×     100 rps     99.6     188 ms    0.3%    <span class="g">✓ pass</span>
+  10×    200 rps    171.2     <span class="r">742 ms</span>    <span class="r">2.8%</span>    <span class="r">✕ p95, err</span>
+  <span class="m">20×    400 rps    skipped  (stopped after first breach)</span>
+
+  <span class="box" data-t="Capacity" style="width:440px"><span class="g">Highest load meeting all SLOs</span>  <span class="w">5× · 100 rps</span>
+<span class="r">First breach</span>  <span class="w">10× · 200 rps</span>  <span class="m">(p95 742ms)</span>
+<span class="m">safety caps  ≤500 rps · ≤200 VUs · ≤300s</span></span>
+
+<span class="a">❯</span> <span class="w">br ask</span> <span class="y">"Redis mar gaya to kya hoga?"</span>
+
+  <span class="a">⏺</span> <span class="b">get_architecture</span>()
+    <span class="m">⎿  5 services, 5 edges</span>
+  <span class="a">⏺</span> <span class="b">predict_impact</span>(target="redis")
+    <span class="m">⎿  api (declared), worker (inferred)</span>
+  <span class="a">⏺</span> <span class="b">propose_experiment</span>(fault="redis:stop", rps=20)
+    <span class="m">⎿  plan p_19a · preflight 9/9 · expires in 5m</span>
+
+  <span class="a">✦</span> api aur worker Redis par depend karte hain <span class="b">[G]</span>.
+    Yeh <span class="y">predicted</span> hai, verified nahi. Test karne ka
+    plan ready hai: stop redis · 20 rps · 2 min.
+
+  Run it?  <span class="sel">❯ Confirm</span>   <span class="m">Cancel</span>
+  <span class="m">nothing runs until you confirm · Ctrl+C = kill switch</span></pre>
+</div>
+
+</body>
+</html>

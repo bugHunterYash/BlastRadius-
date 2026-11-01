@@ -40,6 +40,9 @@ Details: [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md).
 |---|---|
 | [docs/PRD.md](docs/PRD.md) | **Source of truth.** Problem, features, agent spec, API contract, data model, team split, timeline, tests, demo script |
 | [docs/TASKS.md](docs/TASKS.md) | **Per-member task checklist** with hours, done-checks, and handoffs |
+| [docs/PRODUCT.md](docs/PRODUCT.md) | Product: use cases, `npm install -g blastx` install flow, commands, business model and pricing |
+| [docs/PITCH.md](docs/PITCH.md) | 5-minute judges pitch (Hinglish), demo flow, Q&A prep |
+| [docs/mockups/](docs/mockups/) | Prototype images: simple dashboard, simple CLI, pricing page, plus detailed expert views |
 | [docs/PHASE_PLAN.md](docs/PHASE_PLAN.md) | Build phases, bug list, premium CLI design spec |
 | [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md) | Audit of what's done, % complete, tests to run after each phase |
 | [docs/plan.md](docs/plan.md) · [docs/implementation.md](docs/implementation.md) | Original design notes |

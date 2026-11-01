@@ -1,0 +1,4 @@
+agent: analyst
+prompt: "Check the draft and the review against the facts, and point out risks or gaps before launch."
+handoff_rule: "start after the reviewer"
+routing: "report back to the team"

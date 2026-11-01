@@ -1,0 +1,51 @@
+{
+  "name": "reviewer-without-handoff",
+  "steps": [
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "price",
+      "value": "₹499"
+    },
+    {
+      "agent": "researcher",
+      "op": "write",
+      "fact_key": "facts",
+      "value": "facts by researcher"
+    },
+    {
+      "agent": "researcher",
+      "op": "handoff",
+      "to": "writer"
+    },
+    {
+      "agent": "writer",
+      "op": "read",
+      "fact_key": "price"
+    },
+    {
+      "agent": "writer",
+      "op": "write",
+      "fact_key": "draft",
+      "value": "draft by writer"
+    },
+    {
+      "agent": "reviewer",
+      "op": "read",
+      "fact_key": "draft"
+    },
+    {
+      "agent": "reviewer",
+      "op": "write",
+      "fact_key": "review",
+      "value": "review by reviewer"
+    }
+  ],
+  "expect": [
+    {
+      "type": "skipped_handoff",
+      "agent": "reviewer",
+      "fact_key": "review"
+    }
+  ]
+}

@@ -35,7 +35,7 @@ export function TopBar() {
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[15px] whitespace-nowrap text-muted-foreground">
         <span className="hidden sm:inline">Runs</span>
         <span className="hidden sm:inline">/</span>
-        <span className="font-semibold text-foreground">run-42</span>
+        <span className="font-semibold text-foreground">{state.runId}</span>
       </nav>
 
       <ToggleGroup

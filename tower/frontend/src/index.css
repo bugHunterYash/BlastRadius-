@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-white/[0.07] bg-ink-900/80;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-xs;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .tab {
+    @apply rounded-lg px-3 py-1.5 text-sm text-ink-400 transition hover:text-ink-100;
+  }
+  .tab-on {
+    @apply bg-white/[0.07] text-white;
+  }
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+@keyframes ripple-in {
+  from { opacity: 0; transform: scale(0.85) translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.ripple-in {
+  animation: ripple-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ripple-in, .live-dot { animation: none; }
+}

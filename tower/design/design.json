@@ -1,0 +1,29 @@
+{
+  "agents": ["researcher", "writer", "reviewer", "publisher", "analyst"],
+  "handoffs": [["researcher", "writer"], ["writer", "reviewer"], ["reviewer", "publisher"], ["reviewer", "analyst"]],
+  "must_pass_through": {"publisher": ["reviewer"]},
+  "permissions": {
+    "researcher": {"read": ["topic"], "write": ["price", "facts"]},
+    "writer":     {"read": ["price", "facts"], "write": ["draft"]},
+    "reviewer":   {"read": ["draft", "price", "facts"], "write": ["review"]},
+    "publisher":  {"read": ["draft", "review"], "write": ["published"]},
+    "analyst":    {"read": ["price", "facts", "draft", "review"], "write": ["insights"]}
+  },
+  "runtimes": {
+    "researcher": {"provider": "codex", "runtime": "codex_app_server", "model": null, "enabled": true,
+                   "workspace_id": "demo-workspace",
+                   "permissions": {"read": true, "write": false, "execute": true}},
+    "writer":     {"provider": "claude", "runtime": "claude_agent_sdk", "model": null, "enabled": true,
+                   "workspace_id": "demo-workspace",
+                   "permissions": {"read": true, "write": false, "execute": false}},
+    "reviewer":   {"provider": "claude", "runtime": "claude_agent_sdk", "model": null, "enabled": true,
+                   "workspace_id": "demo-workspace",
+                   "permissions": {"read": true, "write": false, "execute": false}},
+    "publisher":  {"provider": "codex", "runtime": "codex_app_server", "model": null, "enabled": true,
+                   "workspace_id": "demo-workspace",
+                   "permissions": {"read": true, "write": true, "execute": false}},
+    "analyst":    {"provider": "antigravity", "runtime": "antigravity_cli", "model": null, "enabled": true,
+                   "workspace_id": "demo-workspace",
+                   "permissions": {"read": true, "write": false, "execute": false}}
+  }
+}

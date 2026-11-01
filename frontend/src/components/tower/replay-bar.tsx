@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { clock, describe } from "@/lib/format"
-import { EVENTS } from "@/lib/sample-data"
+import { EVENTS } from "@/lib/data"
 import { useTower } from "./tower-store"
 
 export function ReplayBar() {

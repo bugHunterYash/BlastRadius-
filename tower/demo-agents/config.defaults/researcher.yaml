@@ -1,0 +1,4 @@
+agent: researcher
+prompt: "Find the launch price and three key facts about the product."
+handoff_rule: "start when the run begins"
+routing: "hand off to writer"

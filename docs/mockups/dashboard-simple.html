@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BlastRadius Simple Dashboard</title>
+<style>
+  :root { --bg:#0B0E14; --panel:#121722; --panel2:#171D2A; --line:#242B3A; --text:#E6E8EB; --muted:#8A8F98;
+          --accent:#E8743B; --ok:#3FB950; --warn:#D29922; --bad:#F85149; --info:#58A6FF; --recover:#2EA0A0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { width:1600px; height:1000px; overflow:hidden; background:var(--bg); color:var(--text);
+         font:15px/1.45 "Segoe UI", system-ui, sans-serif; display:flex; flex-direction:column; }
+  .muted { color:var(--muted); }
+  .top { height:64px; display:flex; align-items:center; gap:28px; padding:0 28px; border-bottom:1px solid var(--line); }
+  .brand { font-weight:800; font-size:18px; display:flex; align-items:center; gap:10px; }
+  .brand i { width:30px; height:30px; border-radius:8px; background:var(--accent); display:grid; place-items:center; font-style:normal; color:#fff; font-size:15px; }
+  .tabs { display:flex; gap:6px; }
+  .tabs span { padding:7px 14px; border-radius:8px; color:var(--muted); font-weight:600; }
+  .tabs .on { background:var(--panel2); color:var(--text); }
+  .grow { flex:1; }
+  .plan { font-size:13px; color:var(--muted); }
+  .up { background:var(--accent); color:#fff; font-weight:700; padding:8px 16px; border-radius:9px; font-size:14px; }
+  .wrap { flex:1; display:grid; grid-template-columns:400px 1fr; gap:20px; padding:22px 28px 0; min-height:0; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; }
+  h2 { font-size:15px; font-weight:700; }
+  .q { display:flex; align-items:center; gap:14px; padding:18px; border-radius:14px; border:1px solid var(--line); background:var(--panel2); margin-top:12px; }
+  .q .ic { width:44px; height:44px; border-radius:12px; display:grid; place-items:center; font-size:22px; flex:none; }
+  .q b { display:block; font-size:16px; }
+  .q small { color:var(--muted); font-size:13px; }
+  .q.on { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+  .verdict { font-size:30px; font-weight:800; letter-spacing:-.01em; line-height:1.2; }
+  .row { display:grid; grid-template-columns:44px 180px 190px 1fr; align-items:center; padding:14px 0; border-top:1px solid var(--line); font-size:16px; }
+  .dot { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-weight:900; font-size:15px; color:#0B0E14; }
+  .st { font-weight:700; }
+  .btn { padding:12px 18px; border-radius:11px; font-weight:700; font-size:15px; border:1px solid var(--line); background:var(--panel2); display:inline-flex; gap:8px; align-items:center; }
+  .btn.p { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .tag { font-size:11px; font-weight:800; padding:2px 7px; border-radius:6px; background:#3a2414; color:#ffb48a; letter-spacing:.04em; }
+  .live { font-size:12px; font-weight:800; padding:3px 9px; border-radius:999px; background:#12301a; color:var(--ok); }
+  .ask { margin:18px 28px 22px; display:flex; align-items:center; gap:14px; padding:16px 20px; border-radius:14px; border:1px solid var(--line); background:var(--panel); }
+  .ask .sp { color:var(--accent); font-size:20px; }
+  .chips span { font-size:13px; padding:5px 11px; border-radius:999px; border:1px solid var(--line); color:var(--muted); margin-left:8px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i>◆</i>BlastRadius</div>
+  <div class="tabs"><span class="on">Home</span><span>Results</span><span>History</span></div>
+  <span class="muted" style="font-size:14px">▣ demo-shop · 5 services</span>
+  <div class="grow"></div>
+  <span class="plan">Free plan</span>
+  <span class="up">Upgrade to Pro</span>
+</header>
+
+<div class="wrap">
+  <!-- left -->
+  <div style="display:flex;flex-direction:column;gap:20px;min-height:0">
+    <div class="card" style="padding:18px 18px 12px">
+      <h2>Your app</h2>
+      <svg viewBox="0 0 364 220" style="width:100%;margin-top:8px">
+        <g stroke="#3a4255" stroke-width="2" fill="none">
+          <path d="M182 50 L182 92"/><path d="M160 128 L92 166"/><path d="M204 128 L272 166"/><path d="M300 68 L104 168" stroke-dasharray="4 5"/>
+        </g>
+        <g font-family="Segoe UI" font-size="14" font-weight="700">
+          <rect x="132" y="14" width="100" height="36" rx="10" fill="#171D2A" stroke="#3a4255"/><text x="182" y="37" fill="#E6E8EB" text-anchor="middle">web</text>
+          <rect x="122" y="92" width="120" height="36" rx="10" fill="#2a1c0c" stroke="#D29922" stroke-width="2"/><text x="182" y="115" fill="#E6E8EB" text-anchor="middle">api</text>
+          <rect x="262" y="50" width="90" height="36" rx="10" fill="#171D2A" stroke="#3a4255"/><text x="307" y="73" fill="#E6E8EB" text-anchor="middle">worker</text>
+          <rect x="34" y="166" width="116" height="40" rx="10" fill="#2e1414" stroke="#F85149" stroke-width="2"/><text x="92" y="191" fill="#E6E8EB" text-anchor="middle">⚡ redis</text>
+          <rect x="214" y="166" width="116" height="40" rx="10" fill="#10241a" stroke="#3FB950" stroke-width="2"/><text x="272" y="191" fill="#E6E8EB" text-anchor="middle">postgres</text>
+        </g>
+      </svg>
+      <div class="muted" style="font-size:12.5px;display:flex;gap:14px;margin-top:4px"><span style="color:var(--bad)">■ broken</span><span style="color:var(--warn)">■ affected</span><span style="color:var(--ok)">■ fine</span><span>■ not tested</span></div>
+    </div>
+
+    <div>
+      <h2>Ask a question</h2>
+      <div class="q on"><div class="ic" style="background:#3a1717">⚡</div><div><b>What if a service goes down?</b><small>Break one service safely and see what fails</small></div></div>
+      <div class="q"><div class="ic" style="background:#16233a">📈</div><div><b>How much traffic can it handle?</b><small>Find your breaking point, step by step</small></div></div>
+    </div>
+  </div>
+
+  <!-- main -->
+  <div class="card" style="padding:26px 30px;display:flex;flex-direction:column;min-height:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="muted" style="font-size:14px">What if <b style="color:var(--text)">redis</b> goes down?</span>
+      <span class="live">● LIVE</span>
+      <span class="muted" style="font-size:13px">tested just now · 20 users/sec · 2 min · 9/9 safety checks passed</span>
+    </div>
+    <div class="verdict" style="margin-top:10px">2 of 3 features broke. <span style="color:var(--recover)">Recovered in 6.2 s.</span></div>
+
+    <div style="margin-top:18px">
+      <div class="row"><span class="dot" style="background:var(--bad)">✕</span><b>Cart</b><span class="st" style="color:var(--bad)">Breaks</span><span class="muted">91% of requests fail while redis is down</span></div>
+      <div class="row"><span class="dot" style="background:var(--warn)">!</span><b>Checkout</b><span class="st" style="color:var(--warn)">Partly broken</span><span class="muted">35% of requests fail</span></div>
+      <div class="row" style="border-bottom:1px solid var(--line)"><span class="dot" style="background:var(--ok)">✓</span><b>Products</b><span class="st" style="color:var(--ok)">Fine</span><span class="muted">no real change</span></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px">
+      <h2>Failed requests over time</h2><span class="muted" style="font-size:13px">Show evidence ›</span>
+    </div>
+    <svg viewBox="0 0 1060 320" style="width:100%;margin-top:8px">
+      <rect x="260" y="10" width="260" height="280" fill="#F85149" opacity=".1"/>
+      <text x="390" y="170" fill="#F85149" font-size="15" font-weight="700" text-anchor="middle" font-family="Segoe UI">redis down</text>
+      <rect x="520" y="10" width="160" height="280" fill="#2EA0A0" opacity=".08"/>
+      <text x="630" y="170" fill="#2EA0A0" font-size="15" font-weight="700" text-anchor="middle" font-family="Segoe UI">coming back</text>
+      <line x1="40" x2="1050" y1="290" y2="290" stroke="#242B3A"/>
+      <line x1="40" x2="1050" y1="150" y2="150" stroke="#242B3A" stroke-dasharray="3 5"/>
+      <line x1="40" x2="1050" y1="10" y2="10" stroke="#242B3A" stroke-dasharray="3 5"/>
+      <g font-family="Consolas" font-size="12" fill="#8A8F98" text-anchor="end"><text x="32" y="294">0%</text><text x="32" y="154">50%</text><text x="32" y="14">100%</text></g>
+      <path d="M40 287 L260 287 L272 36 L520 34 L560 210 L590 283 L1050 287" fill="none" stroke="#F85149" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M40 287 L260 287 L272 36 L520 34 L560 210 L590 283 L1050 287 L1050 290 L40 290 Z" fill="#F85149" opacity=".12"/>
+      <g font-family="Segoe UI" font-size="12" fill="#8A8F98" text-anchor="middle"><text x="40" y="312">0:00</text><text x="260" y="312">0:30</text><text x="520" y="312">1:00</text><text x="1050" y="312">2:00</text></g>
+    </svg>
+
+    <div style="display:flex;gap:12px;margin-top:auto;padding-top:18px;align-items:center">
+      <span class="btn p">✦ Show me the fix</span>
+      <span class="btn">↻ Re-test after fix</span>
+      <span class="btn">⤴ Share report <span class="tag">PRO</span></span>
+      <div class="grow"></div>
+      <div class="card" style="padding:12px 16px;background:var(--panel2);display:flex;gap:14px;align-items:center">
+        <span style="font-size:22px">📈</span>
+        <div><div style="font-weight:700">Safe up to 100 users/sec (5×)</div><div class="muted" style="font-size:13px">Slows down at 200 · last traffic test, 10 min ago</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ask">
+  <span class="sp">✦</span><span class="muted" style="flex:1">Ask anything… e.g. "checkout kyun toota?" or "postgres down ho to?"</span>
+  <span class="chips"><span>Why did cart break?</span><span>Fix it for me</span><span>Test postgres next</span></span>
+</div>
+</body>
+</html>

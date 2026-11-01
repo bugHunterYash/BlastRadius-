@@ -3,14 +3,12 @@
 import { Icon } from "@/components/ui/icon"
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cap } from "@/lib/format"
-import { DESIGN, LAYOUT, RUNS } from "@/lib/sample-data"
+import { DESIGN, FACTS, HEADLINE_TRACE, RUNS } from "@/lib/data"
 import { AgentGlyph } from "./agent-glyph"
 import { useTower } from "./tower-store"
 
-const FACTS = Object.keys(LAYOUT).filter((id) => !DESIGN.agents.includes(id))
-
 export function CommandMenu() {
-  const { state, go, trace, setMode, setSearchOpen } = useTower()
+  const { state, go, trace, setMode, setSearchOpen, setAccessOpen } = useTower()
   const run = (fn: () => void) => () => {
     setSearchOpen(false)
     fn()
@@ -30,13 +28,19 @@ export function CommandMenu() {
           ))}
         </CommandGroup>
         <CommandGroup heading="Actions">
-          <CommandItem value="trace where 499 went" onSelect={run(() => trace("ev02"))}>
-            <Icon name="share" size={20} />
-            Trace where ₹499 went
-          </CommandItem>
-          <CommandItem value="replay run 42" onSelect={run(() => setMode("replay"))}>
+          {HEADLINE_TRACE && (
+            <CommandItem value={`trace where ${HEADLINE_TRACE.label} went`} onSelect={run(() => trace(HEADLINE_TRACE!.eventId))}>
+              <Icon name="share" size={20} />
+              Trace where {HEADLINE_TRACE.label} went
+            </CommandItem>
+          )}
+          <CommandItem value={`replay ${state.runId}`} onSelect={run(() => setMode("replay"))}>
             <Icon name="replay" size={20} />
-            Replay run-42
+            Replay {state.runId}
+          </CommandItem>
+          <CommandItem value="connect agents sign in claude codex google" onSelect={run(() => setAccessOpen(true))}>
+            <Icon name="key" size={20} />
+            Connect agents
           </CommandItem>
         </CommandGroup>
         <CommandGroup heading="Agents">
@@ -48,7 +52,7 @@ export function CommandMenu() {
           ))}
         </CommandGroup>
         <CommandGroup heading="Facts">
-          {FACTS.map((f) => (
+          {FACTS().map((f) => (
             <CommandItem key={f} value={`fact ${f}`} onSelect={run(() => go("fact", f))}>
               <span className="size-3 rounded-[3px] bg-primary" />
               {f}

@@ -1,0 +1,5 @@
+{"event_type": "session.started", "payload": {"session_id": "replay-session", "model": "claude (recorded shape)", "tools": ["Read", "Glob", "Grep"]}}
+{"event_type": "message.delta", "payload": {"text": "Writing the post with the price I was given."}}
+{"event_type": "message.completed", "payload": {"text": "Writing the post with the price I was given."}}
+{"event_type": "message.completed", "payload": {"text": "Launch post: the Aqua bottle is here. Task was: {prompt}"}}
+{"result": {"status": "completed", "final_response": "Launch post: the Aqua bottle is here. Task was: {prompt}", "input_tokens": 0, "output_tokens": 0}}

@@ -142,6 +142,14 @@ CREATE TABLE IF NOT EXISTS reports (
     report         TEXT NOT NULL         -- Report JSON
 );
 
+-- Landing-page waitlist (Pro/Team interest). Email is the identity, so a
+-- repeat signup is a no-op rather than a duplicate row.
+CREATE TABLE IF NOT EXISTS waitlist (
+    email       TEXT PRIMARY KEY,
+    plan        TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_buckets_exp
     ON metric_buckets (experiment_id, elapsed_s);
 """
@@ -399,3 +407,24 @@ class Store:
         if row is None:
             raise NotFound(f"report for experiment {experiment_id} not found")
         return Report.model_validate_json(row["report"])
+
+    # --- waitlist ----------------------------------------------------------------
+
+    def join_waitlist(self, email: str, plan: str) -> tuple[bool, int]:
+        """Add an email; returns (created, position). Joining twice keeps the
+        original row and position, so the landing page can say "already in"."""
+        with self._lock, self._conn:
+            cur = self._conn.execute(
+                "INSERT OR IGNORE INTO waitlist (email, plan, created_at) VALUES (?, ?, ?)",
+                (email, plan, self._now().isoformat()),
+            )
+            created = cur.rowcount == 1
+            position = self._conn.execute(
+                "SELECT COUNT(*) FROM waitlist "
+                "WHERE rowid <= (SELECT rowid FROM waitlist WHERE email = ?)",
+                (email,),
+            ).fetchone()[0]
+        return created, position
+
+    def waitlist_count(self) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM waitlist").fetchone()[0]

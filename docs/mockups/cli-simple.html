@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BlastRadius Simple CLI</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { width:1600px; height:1000px; background:#1c1f26; display:flex; gap:20px; padding:24px;
+         font:15px/1.6 "Cascadia Mono", Consolas, monospace; color:#D7DAE0; overflow:hidden; }
+  .win { background:#0D1017; border:1px solid #2a2f3a; border-radius:12px; overflow:hidden; flex:1;
+         box-shadow:0 20px 50px rgba(0,0,0,.45); display:flex; flex-direction:column; }
+  .bar { height:36px; background:#161a22; border-bottom:1px solid #2a2f3a; display:flex; align-items:center; gap:8px; padding:0 14px;
+         font:12.5px "Segoe UI", sans-serif; color:#8A8F98; }
+  .d { width:12px; height:12px; border-radius:50%; }
+  pre { padding:16px 22px; font:inherit; white-space:pre; }
+  .a{color:#E8743B} .m{color:#8A8F98} .g{color:#3FB950} .y{color:#D29922} .r{color:#F85149} .b{color:#58A6FF} .c{color:#2EA0A0}
+  .w{color:#fff;font-weight:700}
+  .sel{background:#E8743B;color:#0D1017;font-weight:700;padding:0 5px}
+  .box{display:inline-block;position:relative;border:1px solid #E8743B;border-radius:8px;padding:10px 16px;margin:6px 0;vertical-align:top}
+  .box[data-t]::before{content:attr(data-t);position:absolute;top:-12px;left:12px;background:#0D1017;padding:0 6px;color:#E8743B}
+  .step{display:inline-block;width:22px;height:22px;border-radius:50%;background:#E8743B;color:#0D1017;font-weight:800;text-align:center;line-height:22px;font-size:13px;font-family:"Segoe UI"}
+</style>
+</head>
+<body>
+
+<div class="win">
+  <div class="bar"><span class="d" style="background:#F85149"></span><span class="d" style="background:#D29922"></span><span class="d" style="background:#3FB950"></span><span style="margin-left:10px">1 · install + setup</span></div>
+<pre><span class="step">1</span> <span class="m">Install (sirf Docker chahiye)</span>
+<span class="a">$</span> <span class="w">npm install -g blastx</span>
+<span class="m">added 1 package in 3s</span>
+
+<span class="step">2</span> <span class="m">Project setup</span>
+<span class="a">$</span> <span class="w">blastx init</span>
+<span class="g">✓</span> Found docker-compose.yml  <span class="m">(5 services)</span>
+
+<span class="b">?</span> Which pages matter most?
+  <span class="g">◉</span> GET  /api/products
+  <span class="g">◉</span> GET  /api/cart
+  <span class="g">◉</span> POST /api/checkout
+
+<span class="b">?</span> Which services is it OK to break?
+  <span class="g">◉</span> redis   <span class="g">◉</span> worker   <span class="m">◯ postgres</span>
+
+<span class="g">✓</span> Wrote blastx.yml
+<span class="g">✓</span> Added safety labels  <span class="m">(your compose file is untouched)</span>
+
+<span class="step">3</span> <span class="m">Start</span>
+<span class="a">$</span> <span class="w">blastx up</span>
+<span class="g">✓</span> Engine ready
+<span class="g">✓</span> Dashboard  <span class="b">http://localhost:7777</span>
+
+<span class="box" data-t="Try this" style="width:600px"><span class="w">blastx break redis</span>        <span class="m">what if redis goes down?</span>
+<span class="w">blastx load --up-to 10x</span>   <span class="m">how much traffic can it take?</span>
+<span class="w">blastx ask "..."</span>          <span class="m">ask in Hinglish or English</span></span></pre>
+</div>
+
+<div class="win">
+  <div class="bar"><span class="d" style="background:#F85149"></span><span class="d" style="background:#D29922"></span><span class="d" style="background:#3FB950"></span><span style="margin-left:10px">2 · break + load</span></div>
+<pre><span class="a">$</span> <span class="w">blastx break redis</span>
+
+  What if <span class="w">redis</span> goes down?
+  <span class="m">20 users/sec · 2 min ·</span> <span class="g">9/9 safety checks ✓</span>
+  Start?  <span class="sel">› Yes</span>  <span class="m">No</span>
+
+  <span class="b">normal ████████</span> <span class="r">redis down ████████</span> <span class="c">back ████</span><span class="m">░░░░</span>  <span class="w">1:15</span>
+
+  <span class="box" data-t="Result" style="width:640px"><span class="w">2 of 3 features broke.</span> <span class="c">Recovered in 6.2s.</span>
+
+<span class="r">✕ Cart</span>       breaks          <span class="m">91% of requests fail</span>
+<span class="y">! Checkout</span>   partly broken   <span class="m">35% fail</span>
+<span class="g">✓ Products</span>   fine            <span class="m">no real change</span></span>
+
+  <span class="m">next →</span> blastx fix   <span class="m">·</span>   blastx report --open
+
+
+<span class="a">$</span> <span class="w">blastx load --up-to 10x</span>
+
+  <span class="g">1×  20/s  ✓</span>   <span class="g">2×  40/s  ✓</span>   <span class="g">5×  100/s ✓</span>   <span class="r">10× 200/s ✕ slow</span>
+
+  <span class="box" data-t="Result" style="width:640px"><span class="g">Safe up to 100 users/sec (5×)</span>
+<span class="r">Slows down at 200 users/sec</span>  <span class="m">(p95 742ms &gt; 500ms)</span></span>
+
+  <span class="m">next →</span> blastx ask "checkout slow kyun hua?"</pre>
+</div>
+
+</body>
+</html>
