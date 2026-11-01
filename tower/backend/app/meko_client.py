@@ -111,6 +111,18 @@ async def write(text: str, kind: str = "memory", datapack: str | None = None) ->
     return f"local:{item_id}"
 
 
+async def read(ref: str) -> str | None:
+    """The text of one item written by write(), by the reference it returned. None if it can't be read."""
+    kind, _, item_id = ref.partition(":")
+    if kind == "meko" and settings.notebook_mode == "meko" and item_id and item_id != "ok":
+        async with meko() as s:
+            data = _json(await s.call_tool("memory_get_by_id", {"memory_id": item_id, **await _context(s)}))
+        return (data.get("memory") or data.get("text")) if isinstance(data, dict) else None
+    if kind == "local":
+        return await db.pool.fetchval("SELECT text FROM notebook_items WHERE item_id = $1", uuid.UUID(item_id))
+    return None
+
+
 async def search(query: str | None, limit: int = 50, datapack: str | None = None) -> list[dict]:
     """Newest-first notebook items whose text contains query (all items when query is empty)."""
     if settings.notebook_mode == "meko":

@@ -59,7 +59,10 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        {children}
+        {/* cmdk's input, list and items read their state from this root; without it they crash */}
+        <Command className="**:data-[slot=command-input-wrapper]:h-auto [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+          {children}
+        </Command>
       </DialogContent>
     </Dialog>
   )

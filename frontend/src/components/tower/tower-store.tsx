@@ -258,6 +258,13 @@ interface Ask {
 export function TowerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initial)
   const runRef = useRef<string | null>(null)
+  const offerReport = useCallback(() => {
+    toast("The run has ended", {
+      description: "See how your agents did and what to fix before the next run.",
+      action: { label: "View report", onClick: () => dispatch({ type: "report", open: true }) },
+      duration: 10000,
+    })
+  }, [])
   const asks = useRef(new Map<string, Ask>())
 
   const go = useCallback((kind: ViewKind, id: string) => dispatch({ type: "go", view: { kind, id } }), [])
@@ -279,19 +286,30 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   const setNewProjectOpen = useCallback((open: boolean) => dispatch({ type: "newProject", open }), [])
   const setAccessOpen = useCallback((open: boolean) => dispatch({ type: "access", open }), [])
 
-  /** Load a run from the backend (the newest when runId is omitted). Falls back to the sample if it's down. */
+  /** Load a run from the backend (the one that shows the most when runId is omitted). Falls back to the sample if it's down. */
+  const retries = useRef(0)
   const load = useCallback(async (runId?: string) => {
     try {
       const snap = await loadSnapshot(runId ?? runRef.current ?? undefined)
       if (!snap) return
+      retries.current = 0
       const sameRun = runRef.current === snap.runId
       runRef.current = snap.runId
       const { issues, calls } = applySnapshot(snap)
       dispatch({ type: "load", issues, calls, runId: snap.runId, sameRun })
     } catch {
-      if (SOURCE === "sample" && runRef.current === null) runRef.current = null // stay on the bundled sample
+      // the first request often fails while the dev server is still compiling or the backend is starting:
+      // try again for about half a minute before settling on the sample
+      if (SOURCE === "sample" && runRef.current === null && retries.current < 10) {
+        retries.current += 1
+        setTimeout(() => void loadRef.current(runId), 3000)
+      }
     }
   }, [])
+  const loadRef = useRef(load)
+  useEffect(() => {
+    loadRef.current = load
+  }, [load])
 
   const openRun = useCallback((runId: string) => {
     runRef.current = runId
@@ -384,6 +402,15 @@ export function TowerProvider({ children }: { children: ReactNode }) {
           /* ignore */
         }
       }
+      // the run on screen just finished its analysis: offer its report (once, not on every reload)
+      if (n === "run.status") {
+        try {
+          const d = JSON.parse((ev as MessageEvent).data)
+          if (d.status === "done" && d.run_id === runRef.current) offerReport()
+        } catch {
+          /* ignore */
+        }
+      }
       refresh()
     }))
     const onAgent = (ev: Event) => {
@@ -428,7 +455,7 @@ export function TowerProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer)
       es.close()
     }
-  }, [load])
+  }, [load, offerReport])
 
   // the stream and replay step through one event at a time
   useEffect(() => {
@@ -437,21 +464,18 @@ export function TowerProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(t)
   }, [state.playing])
 
-  // when the run ends, offer its report
-  const ended = state.replayN >= EVENTS.length && state.mode === "graph" && !state.reportOpen
+  // when the sample run plays to its end, offer its report. A live run that was already over when it
+  // loaded has its own "View session report" button in the chat, so it gets no pop-up.
+  const ended = state.source !== "live" && state.replayN >= EVENTS.length && state.mode === "graph" && !state.reportOpen
   const reportOffered = useRef(false)
   useEffect(() => {
     if (!ended || reportOffered.current) return
     const t = setTimeout(() => {
       reportOffered.current = true
-      toast("The run has ended", {
-        description: "See how your agents did and what to fix before the next run.",
-        action: { label: "View report", onClick: () => dispatch({ type: "report", open: true }) },
-        duration: 10000,
-      })
+      offerReport()
     }, 8000)
     return () => clearTimeout(t)
-  }, [ended])
+  }, [ended, offerReport])
 
   // sample only: stands in for the fix.ready event on /v1/stream, a few seconds after the run ends
   const runEnded = state.replayN >= EVENTS.length

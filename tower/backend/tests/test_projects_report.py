@@ -37,6 +37,29 @@ def test_new_project_creates_the_run_brief_and_tasks(client):  # noqa: F811
     assert row["final_response"] and row["input_tokens"] == 120
 
 
+def test_in_order_parts_share_memory_and_the_run_is_analysed(client):  # noqa: F811
+    import time
+    p = new_project(client, in_order=True).json()
+    assert [x["agent"] for x in p["invocations"]] == ["researcher"] and p["queued"] == [{"agent": "writer", "phase": "Plan"}]
+
+    end = time.monotonic() + 30
+    while client.get(f"/v1/runs/{p['run_id']}").json()["status"] != "done":
+        assert time.monotonic() < end, "the run was never analysed"
+        time.sleep(0.2)
+    events = client.get(f"/v1/runs/{p['run_id']}/events").json()
+    ops = [(e["agent"], e["op"], e["fact_key"] or e["target_agent"]) for e in events]
+    assert ops == [("system", "run_start", None), ("researcher", "write", "facts"), ("researcher", "handoff", "writer"),
+                   ("writer", "read", "facts"), ("writer", "write", "draft"), ("system", "run_end", None)]
+    read = next(e for e in events if e["op"] == "read")
+    assert read["version"] == next(e["version"] for e in events if e["op"] == "write") and read["invocation_id"]
+
+    # the writer was given the researcher's findings, and they are in the shared notebook
+    writer = next(i for i in client.get(f"/v1/runs/{p['run_id']}/invocations").json()["invocations"] if i["agent_id"] == "writer")
+    assert "Shared memory from the agents before you" in client.get(f"/v1/invocations/{writer['invocation_id']}").json()["user_prompt"]
+    assert any(f"[{p['run_id']}] researcher wrote facts" in n["text"] for n in client.get("/v1/notebook").json())
+    assert not client.get(f"/v1/issues?run_id={p['run_id']}").json()        # a clean hand-off: nothing to flag
+
+
 def test_new_project_refuses_unknown_agents_before_creating_anything(client):  # noqa: F811
     r = new_project(client, tasks=[{"agent": "ghost", "task": "Haunt"}])
     assert r.status_code == 404

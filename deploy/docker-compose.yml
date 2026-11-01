@@ -1,0 +1,108 @@
+# The whole product on one server: Control Tower (UI + API), its Postgres, Ollama, and Caddy for HTTPS and
+# the login. The BlastRadius engine and its demo stack run from the engine repo's own compose files
+# (see deploy/setup.sh); the tower reaches the engine over the shared br-control network.
+#
+#   cp deploy/.env.example deploy/.env   # fill it in
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+name: tower
+
+services:
+  tower-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tower
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in deploy/.env}
+      POSTGRES_DB: tower
+    volumes: [tower-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tower"]
+      interval: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:0.12.6
+    restart: unless-stopped
+    volumes: [ollama:/root/.ollama]
+    environment:
+      OLLAMA_KEEP_ALIVE: 10m
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      retries: 10
+
+  # pulls the summarizer model once, then exits
+  ollama-pull:
+    image: ollama/ollama:0.12.6
+    depends_on:
+      ollama: {condition: service_healthy}
+    environment: {OLLAMA_HOST: "http://ollama:11434"}
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5:0.5b}"]
+    restart: "no"
+
+  tower-api:
+    build:
+      context: ..
+      dockerfile: deploy/tower-api.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      tower-db: {condition: service_healthy}
+      ollama: {condition: service_healthy}
+    environment:
+      DATABASE_URL: postgresql://tower:${DB_PASSWORD}@tower-db:5432/tower
+      TOWER_API_TOKEN: ${TOWER_API_TOKEN:?set TOWER_API_TOKEN in deploy/.env}
+      TOWER_INGEST_TOKEN: ${TOWER_INGEST_TOKEN:?set TOWER_INGEST_TOKEN in deploy/.env}
+      CORS_ORIGINS: https://${DOMAIN}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      MEKO_MCP_URL: ${MEKO_MCP_URL:-}
+      MEKO_API_KEY: ${MEKO_API_KEY:-}
+      MEKO_DATAPACK_ID: ${MEKO_DATAPACK_ID:-}
+      CODEX_MODEL: ${CODEX_MODEL:-}
+      CLAUDE_AGENT_MODEL: ${CLAUDE_AGENT_MODEL:-}
+      # no Antigravity CLI for Linux servers in this image; turn on if you install agy
+      ANTIGRAVITY_RUNTIME_ENABLED: ${ANTIGRAVITY_RUNTIME_ENABLED:-false}
+      # live sync reads the chat apps on the machine it runs on; a server has none of yours
+      LIVE_SYNC_ENABLED: ${LIVE_SYNC_ENABLED:-false}
+      AGENT_MAX_CONCURRENCY: ${AGENT_MAX_CONCURRENCY:-2}
+      BLASTX_URL: http://backend:8000
+    volumes:
+      # Claude and Codex keep their sign-ins here; it survives rebuilds
+      - agent-home:/home/tower
+    networks: [default, br-control]
+
+  tower-ui:
+    build:
+      context: ../frontend
+      dockerfile: ../deploy/tower-ui.Dockerfile
+    restart: unless-stopped
+    depends_on: [tower-api]
+    environment:
+      TOWER_API_URL: http://tower-api:8010
+      TOWER_API_TOKEN: ${TOWER_API_TOKEN}
+      TOWER_ALLOWED_HOSTS: ${DOMAIN}
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on: [tower-ui]
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in deploy/.env}
+      UI_USER: ${UI_USER:-admin}
+      UI_PASSWORD_HASH: ${UI_PASSWORD_HASH:?set UI_PASSWORD_HASH in deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  tower-db:
+  ollama:
+  agent-home:
+  caddy-data:
+
+networks:
+  br-control:
+    name: br-control
+    external: true

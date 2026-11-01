@@ -140,14 +140,14 @@ function GraphPane() {
             <Toggle id="t-handoffs" label="Handoffs" checked={showHandoffs} onChange={setShowHandoffs} />
             <Toggle id="t-labels" label="Memory names" checked={showLabels} onChange={setShowLabels} />
           </div>
+          <Counters />
           <div className="relative min-h-0 flex-1 bg-paper">
             <ReactFlowProvider>
               <MemoryGraph showReads={showReads} showHandoffs={showHandoffs} showLabels={showLabels} />
             </ReactFlowProvider>
-            <Counters />
-            <GraphKey />
             <ReplayBar />
           </div>
+          <GraphKey />
           <ActivityStrip />
         </>
       )}
@@ -164,12 +164,10 @@ function Toggle({ id, label, checked, onChange }: { id: string; label: string; c
   )
 }
 
-/** What the colours and shapes mean, always visible in the corner of the graph. */
+/** What the colours and shapes mean: one row under the graph, so it never covers a node. */
 function GraphKey() {
-  const { state } = useTower()
-  if (state.mode === "replay") return null
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 z-10 hidden flex-col gap-1.5 rounded-xl border bg-card/90 sm:flex px-3 py-2.5 text-[13px] text-ink-2 backdrop-blur-sm">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-t px-4 py-1.5 text-[12.5px] text-ink-2">
       <span className="flex items-center gap-2">
         <span className="size-3 rounded-full border-[1.5px]" style={{ borderColor: "var(--agent-researcher)", background: "color-mix(in oklab, var(--agent-researcher) 10%, white)" }} />
         Agent, one colour each

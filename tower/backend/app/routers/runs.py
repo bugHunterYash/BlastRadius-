@@ -50,6 +50,7 @@ class NewProject(BaseModel):
     folder: str | None = Field(default=None, max_length=1000)
     tasks: list[Part] = Field(min_length=1, max_length=10)
     allow_edits: bool = False
+    in_order: bool = False      # each part waits for the one before and reads its findings
 
 
 @router.post("/v1/project-runs", status_code=201)
@@ -57,7 +58,8 @@ async def new_project(body: NewProject):
     """Start a project: a run with its brief, and each agent's part sent to it (read-only unless edits are allowed)."""
     try:
         return await briefs.start(name=body.name.strip(), kind=body.kind, goal=body.goal.strip(), deliverable=body.deliverable,
-                                  folder=body.folder, tasks=[t.model_dump() for t in body.tasks], allow_edits=body.allow_edits)
+                                  folder=body.folder, tasks=[t.model_dump() for t in body.tasks], allow_edits=body.allow_edits,
+                                  in_order=body.in_order)
     except projects.ProjectError as exc:
         raise HTTPException(422, str(exc)) from exc
     except agent_router.RoutingError as exc:

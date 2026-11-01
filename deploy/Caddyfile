@@ -1,0 +1,19 @@
+# HTTPS (free certificate from Let's Encrypt, renewed by Caddy) and one login in front of everything.
+# Only the UI is published; the API, database, Ollama and the engine stay on the private Docker network.
+{$DOMAIN} {
+	basic_auth {
+		{$UI_USER} {$UI_PASSWORD_HASH}
+	}
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	# keep the live stream (SSE) flowing
+	reverse_proxy tower-ui:3000 {
+		flush_interval -1
+	}
+}

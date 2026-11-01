@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import db, execution, pipeline
+from app import briefs, db, execution, pipeline
 from app.runtime import auth as agent_auth
 from app.agents import fixer, summarizer
 from app.config import DEV_TOKEN, settings
@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI):
     syncing = live_sync.start()
     yield
     await live_sync.shutdown(syncing)
+    await briefs.shutdown()
     await execution.shutdown()
     await agent_auth.shutdown()
     task.cancel()

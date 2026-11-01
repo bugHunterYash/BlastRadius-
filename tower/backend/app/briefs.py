@@ -1,11 +1,20 @@
-"""Starting a project from the UI: a brief (name, goal, phases), a run, and each agent's part sent to it."""
+"""Starting a project from the UI: a brief (name, goal, phases), a run, and each agent's part sent to it.
 
+Every part reads the shared memory before it starts and writes its findings after (app.team_memory).
+In order, each part waits for the one before, so it reads that agent's findings; otherwise all start at once.
+"""
+
+import asyncio
 import datetime as dt
+import logging
 import re
 
-from app import db, execution, execution_db as xdb, projects
+from app import db, execution, execution_db as xdb, projects, team_memory
 from app.runtime import router as agent_router
 from app.runtime.models import InvokeRequest
+
+log = logging.getLogger("tower.briefs")
+_runs: set[asyncio.Task] = set()       # running project runs, kept so they aren't garbage-collected
 
 KINDS = {
     "content": ("Content pipeline", "post"),
@@ -24,7 +33,9 @@ def run_id_for(name: str) -> str:
 
 def prompt_for(brief: dict, label: str, task: str) -> str:
     return (f"Project: {brief['name']}\nGoal: {brief['goal']}\nYour part ({label}): {task}\n\n"
-            "Work only on your part. End with a short summary of what you did and anything the next agent needs.")
+            "Work only on your part. End with a short summary of what you did and anything the next agent needs. "
+            "The Control Tower saves your final answer to the team's shared memory and hands it to the next agent, "
+            "so you don't need to hand off yourself.")
 
 
 async def get(run_id: str) -> dict | None:
@@ -33,8 +44,9 @@ async def get(run_id: str) -> dict | None:
 
 
 async def start(*, name: str, kind: str, goal: str, deliverable: str | None, folder: str | None,
-                tasks: list[dict], allow_edits: bool) -> dict:
-    """Create the run and its brief, open the folder to the agents if one was given, and send every task."""
+                tasks: list[dict], allow_edits: bool, in_order: bool = False) -> dict:
+    """Create the run and its brief, open the folder to the agents if one was given, and send the tasks:
+    all now, or (in_order) the first now and each next one when the one before has finished."""
     label, default_deliverable = KINDS[kind]
     workspace_id = (await projects.register(folder))["workspace_id"] if folder else None
     design = await db.get_design()
@@ -50,13 +62,50 @@ async def start(*, name: str, kind: str, goal: str, deliverable: str | None, fol
             "INSERT INTO project_briefs (run_id, name, kind, goal, deliverable, phases, workspace_id) "
             "VALUES ($1, $2, $3, $4, $5, $6, $7)",
             run_id, name, kind, goal, brief["deliverable"], phases, workspace_id)
-    sent = []
-    for phase, t in zip(phases, tasks):
+    await team_memory.emit(run_id, "system", "run_start")
+
+    async def send(i: int) -> dict:
+        phase, t = phases[i], tasks[i]
+        memory, reads = await team_memory.recall(run_id, t["agent"], design)
         inv, _ = await execution.submit(t["agent"], InvokeRequest(
-            run_id=run_id, prompt=prompt_for(brief, phase["label"], t["task"]), why=f"{phase['label']} for {name}",
+            run_id=run_id, prompt=prompt_for(brief, phase["label"], t["task"]) + memory, why=f"{phase['label']} for {name}",
             workspace_id=workspace_id, read_only=not allow_edits))
-        sent.append({"agent": t["agent"], "invocation_id": inv["invocation_id"], "phase": phase["label"]})
-    return {**brief, "invocations": sent}
+        await team_memory.tie_reads(reads, inv["invocation_id"])
+        return {"agent": t["agent"], "invocation_id": inv["invocation_id"], "phase": phase["label"]}
+
+    async def finish(i: int, sent: dict) -> None:
+        done = await execution.wait(sent["invocation_id"])
+        if done and done["status"] == "completed" and done.get("final_response"):
+            nxt = phases[i + 1]["agent"] if i + 1 < len(phases) else None
+            await team_memory.remember(run_id, sent["agent"], done["final_response"], design,
+                                       invocation_id=sent["invocation_id"], next_agent=nxt)
+
+    first = [await send(0)] if in_order else [await send(i) for i in range(len(phases))]
+
+    async def follow() -> None:
+        try:
+            if in_order:
+                await finish(0, first[0])
+                for i in range(1, len(phases)):
+                    await finish(i, await send(i))
+            else:
+                await asyncio.gather(*(finish(i, s) for i, s in enumerate(first)))
+        except Exception:
+            log.exception("project run %s stopped early", run_id)
+        await team_memory.emit(run_id, "system", "run_end")       # starts the analysis
+
+    task = asyncio.create_task(follow())
+    _runs.add(task)
+    task.add_done_callback(_runs.discard)
+    return {**brief, "in_order": in_order, "invocations": first,
+            "queued": [{"agent": p["agent"], "phase": p["label"]} for p in phases[len(first):]]}
+
+
+async def shutdown() -> None:
+    """Stop following project runs when the server stops (their tasks are marked interrupted on the next start)."""
+    for t in list(_runs):
+        t.cancel()
+    await asyncio.gather(*_runs, return_exceptions=True)
 
 
 async def report_data(run_id: str) -> dict | None:

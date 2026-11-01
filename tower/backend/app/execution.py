@@ -180,6 +180,14 @@ async def cancel(invocation_id: str) -> bool:
     return True
 
 
+async def wait(invocation_id: str) -> dict | None:
+    """Wait until an invocation has finished (it may already have), then return its row."""
+    task = _tasks.get(invocation_id)
+    if task is not None:
+        await asyncio.gather(asyncio.shield(task), return_exceptions=True)
+    return await xdb.get_invocation(uuid.UUID(invocation_id))
+
+
 def is_running(invocation_id: str) -> bool:
     t = _tasks.get(invocation_id)
     return t is not None and not t.done()

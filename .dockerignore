@@ -1,0 +1,18 @@
+# Build context for deploy/tower-api.Dockerfile is the repo root; only tower/ and tests/fixtures are used.
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.next
+**/.env
+**/*.db
+**/*.db-shm
+**/*.db-wal
+.git
+frontend
+landing
+docs
+core
+backend
+tower/frontend
+tower/backend/tests
