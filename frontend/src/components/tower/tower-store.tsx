@@ -54,6 +54,8 @@ interface State {
   loaded: number
   /** the "connect your agents" dialog */
   accessOpen: boolean
+  /** the folders the tower may show chats from */
+  foldersOpen: boolean
   /** each agent's current conversation (agent_sessions id), so a follow-up continues it */
   chatSessions: Record<string, string>
 }
@@ -80,6 +82,7 @@ type Action =
   | { type: "newProject"; open: boolean }
   | { type: "load"; issues: Issue[]; calls: MekoCall[]; runId: string; sameRun: boolean }
   | { type: "access"; open: boolean }
+  | { type: "folders"; open: boolean }
   | { type: "backend"; backend: State["backend"] }
   | { type: "session"; agent: string; sessionId: string | null }
 
@@ -109,6 +112,7 @@ const initial: State = {
   runId: "run-42",
   loaded: 0,
   accessOpen: false,
+  foldersOpen: false,
   chatSessions: {},
 }
 
@@ -211,6 +215,8 @@ function reducer(s: State, a: Action): State {
       return { ...base, view, history: a.sameRun ? s.history : [], mode: s.mode === "trace" && a.sameRun ? s.mode : "graph",
                trace: a.sameRun ? s.trace : null, replayN: EVENTS.length, playing: false }
     }
+    case "folders":
+      return { ...s, foldersOpen: a.open }
     case "backend":
       return { ...s, backend: a.backend }
     case "access":
@@ -244,6 +250,7 @@ interface Tower {
   ask: (agent: string, text: string) => Promise<void>
   openRun: (runId: string) => void
   setAccessOpen: (open: boolean) => void
+  setFoldersOpen: (open: boolean) => void
   /** start a fresh conversation with an agent (the next question opens a new session) */
   newChat: (agent: string) => void
   setGraphView: (view: GraphView) => void
@@ -291,6 +298,7 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   const openWorkspace = useCallback((folder: string | null) => dispatch({ type: "workspace", folder }), [])
   const setNewProjectOpen = useCallback((open: boolean) => dispatch({ type: "newProject", open }), [])
   const setAccessOpen = useCallback((open: boolean) => dispatch({ type: "access", open }), [])
+  const setFoldersOpen = useCallback((open: boolean) => dispatch({ type: "folders", open }), [])
 
   /** Load a run from the backend (the one that shows the most when runId is omitted). Nothing fake is shown while it can't load. */
   const retries = useRef(0)
@@ -512,8 +520,8 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   }, [state.searchOpen])
 
   const value = useMemo(
-    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen, openWorkspace, setNewProjectOpen }),
-    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen, openWorkspace, setNewProjectOpen],
+    () => ({ state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen, openWorkspace, setNewProjectOpen, setFoldersOpen }),
+    [state, go, back, setMode, trace, setReplay, setPlaying, decide, setSearchOpen, setTab, setHighlight, postNote, ask, newChat, openRun, setAccessOpen, setGraphView, setChatAgent, setReportOpen, openWorkspace, setNewProjectOpen, setFoldersOpen],
   )
   return <TowerContext.Provider value={value}>{children}</TowerContext.Provider>
 }

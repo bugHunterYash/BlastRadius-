@@ -9,16 +9,19 @@ import { isOpen, latestVersion } from "@/lib/graph"
 import { cap } from "@/lib/format"
 import { AGENT_META, DATAPACK, DESIGN, EVENTS, FACTS, PRIOR, PROVIDERS, RUNS } from "@/lib/data"
 import { LiveDot, sessionTitle, useLiveSessions } from "./live-sessions"
+import { useFolders } from "./folder-access"
 import { folderName, projectsOf } from "./project-workspace"
 import { AgentAvatar, RuntimeMark, runtimeLine } from "./runtime-logo"
 import { seenIssues, useTower, type ViewKind } from "./tower-store"
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { state, go, setAccessOpen, openWorkspace, setNewProjectOpen } = useTower()
+  const { state, go, setAccessOpen, openWorkspace, setNewProjectOpen, setFoldersOpen } = useTower()
   const { resolvedTheme, setTheme } = useTheme()
   const open = seenIssues(state).filter(isOpen)
   const live = useLiveSessions(state.source === "live", 60)
   const projects = projectsOf(live).slice(0, 5)
+  const { data: folders } = useFolders(state.source === "live")
+  const noFolders = folders?.enforced && folders.allowed.length === 0
   const nav = (kind: ViewKind, id: string) => {
     go(kind, id)
     onNavigate?.()
@@ -81,9 +84,18 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </Group>
 
-      {projects.length > 0 && (
-        <Group title="Workspaces">
-          {projects.map((p) => (
+      <Group title="Workspaces">
+        {noFolders && (
+          // a new user sees none of their chats until they choose which folders the tower may see
+          <button
+            type="button"
+            onClick={() => setFoldersOpen(true)}
+            className="mb-1 rounded-lg border border-dashed border-cobalt/40 bg-cobalt-soft/40 px-2.5 py-2 text-left text-[13px] leading-snug text-ink-2 hover:bg-cobalt-soft/70"
+          >
+            <span className="font-semibold text-foreground">Allow a folder</span> to see your Claude, Codex and Antigravity chats here.
+          </button>
+        )}
+        {projects.map((p) => (
             <Item key={p.folder} on={state.workspace === p.folder} onClick={() => { openWorkspace(p.folder); onNavigate?.() }}>
               <Icon name="folder_open" size={19} />
               <span className="truncate" title={p.folder}>{folderName(p.folder)}</span>
@@ -93,8 +105,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               </span>
             </Item>
           ))}
-        </Group>
-      )}
+        <Item on={state.foldersOpen} onClick={() => { setFoldersOpen(true); onNavigate?.() }}>
+          <Icon name="create_new_folder" size={19} />
+          <span className="truncate">Folders</span>
+          {folders?.enforced && <span className="ml-auto pl-1 text-[12.5px] text-muted-foreground tabular-nums">{folders.allowed.length}</span>}
+        </Item>
+      </Group>
 
       {live.length > 0 && (
         <Group title="Live sessions">

@@ -132,6 +132,9 @@ export const isChatCall = (c: MekoCall) => /^(live|task|ans)-/.test(c.call_id)
 
 const TERMINAL = new Set(["completed", "failed", "cancelled", "timeout"])
 
+/** What the person asked, without the shared memory the tower added for the agent (still shown in its steps). */
+export const askedText = (prompt: string | null | undefined) => (prompt ?? "").split("\n\nShared memory from the agents before you")[0]
+
 /** Today's questions to agents and their answers, rebuilt from the database. */
 export function toChatCalls(invs: ApiInvocation[]): MekoCall[] {
   return invs.flatMap((inv) => {
@@ -140,7 +143,7 @@ export function toChatCalls(invs: ApiInvocation[]): MekoCall[] {
     const failed = done && inv.status !== "completed"
     return [
       { call_id: `task-${inv.invocation_id}`, ts: inv.created_at, actor: "you", kind: "task" as const, datapack: dp, to: inv.agent_id,
-        text: inv.user_prompt ?? "" },
+        text: askedText(inv.user_prompt) },
       { call_id: `ans-${inv.invocation_id}`, ts: inv.completed_at ?? inv.created_at, actor: inv.agent_id,
         kind: failed ? ("error" as const) : ("answer" as const), datapack: dp,
         text: !done ? "…" : failed ? `${inv.status === "cancelled" ? "Cancelled" : "Failed"}: ${inv.error_message ?? "no details"}` : inv.final_response || "(no answer)" },

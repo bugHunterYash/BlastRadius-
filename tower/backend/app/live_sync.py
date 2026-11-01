@@ -22,7 +22,7 @@ import sqlite3
 import urllib.parse
 from pathlib import Path
 
-from app import db, execution_db as xdb, stream
+from app import db, execution_db as xdb, folders, stream
 from app.config import settings
 from app.runtime.base import RuntimeError_
 from app.runtime.codex_app_server import CLIENT_INFO, JsonRpcConnection, codex_argv
@@ -66,6 +66,17 @@ async def _drop(thread_ids: list[str]) -> int:
                  AND NOT EXISTS (SELECT 1 FROM issues x WHERE x.run_id = r.run_id)
                  AND NOT EXISTS (SELECT 1 FROM digests d WHERE d.run_id = r.run_id)""", runs)
     return len(rows)
+
+
+async def forget_unallowed() -> int:
+    """Remove the tower's copies of synced chats whose folder isn't allowed (any more). They come back if it is."""
+    rows = await db.pool.fetch(
+        "SELECT provider, provider_thread_id, metadata->>'cwd' AS cwd FROM agent_invocations "
+        "WHERE runtime = ANY($1::text[]) AND provider_thread_id IS NOT NULL", list(SYNCED_RUNTIMES))
+    gone = [r for r in rows if not folders.permits(r["cwd"])]
+    for r in gone:
+        await folders.note_seen(r["cwd"], r["provider"])
+    return await _drop([r["provider_thread_id"] for r in gone]) if gone else 0
 
 
 async def hide(invocation_id: uuid.UUID) -> dict | None:
@@ -149,6 +160,9 @@ async def sync_claude(skip: set[str]) -> list[dict]:
     sessions = await asyncio.to_thread(list_sessions, settings.LIVE_SYNC_CLAUDE_DIR or None, settings.LIVE_SYNC_LIMIT)
     for s in sessions:
         if s.session_id in skip or _under(s.cwd, settings.AGENT_WORKSPACE_ROOT):
+            continue
+        if not folders.permits(s.cwd):
+            await folders.note_seen(s.cwd, "claude")
             continue
         key = f"import:claude:{s.session_id}"
         inv = await _existing(key)                    # imported by hand earlier: keep that one live
@@ -313,6 +327,9 @@ class CodexSync:
             tid = t.get("id")
             if not tid or tid in skip or t.get("ephemeral") or _under(t.get("cwd"), settings.AGENT_WORKSPACE_ROOT):
                 continue
+            if not folders.permits(t.get("cwd")):
+                await folders.note_seen(t.get("cwd"), "codex")
+                continue
             key = f"sync:codex:{tid}"
             updated_s = float(t.get("updatedAt") or 0) or None
             inv = await _existing(key)
@@ -446,6 +463,9 @@ async def sync_antigravity(skip: set[str]) -> list[dict]:
         cwd = conv["folders"][0] if conv["folders"] else None
         if conv["id"] in skip or _under(cwd, settings.AGENT_WORKSPACE_ROOT):
             continue
+        if not folders.permits(cwd):
+            await folders.note_seen(cwd, "antigravity")
+            continue
         try:
             updated_s = dt.datetime.fromisoformat(str(conv["modified"])).timestamp()
         except ValueError:
@@ -473,6 +493,7 @@ _codex = CodexSync()
 
 
 async def sync_once() -> list[dict]:
+    await forget_unallowed()
     skip = await _tower_thread_ids()
     changes: list[dict] = []
     for name, fn in (("claude", lambda: sync_claude(skip)), ("codex", lambda: _codex.sync(skip)),

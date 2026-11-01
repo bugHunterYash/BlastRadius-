@@ -60,6 +60,33 @@ def test_in_order_parts_share_memory_and_the_run_is_analysed(client):  # noqa: F
     assert not client.get(f"/v1/issues?run_id={p['run_id']}").json()        # a clean hand-off: nothing to flag
 
 
+def test_chat_questions_share_the_team_memory(client):  # noqa: F811
+    import time
+    run = "chat-2026-11-01"
+    ask = lambda agent, text: client.post(f"/v1/agents/{agent}/invoke", json={"run_id": run, "prompt": text}).json()  # noqa: E731
+
+    first = ask("researcher", "What does the Aqua bottle cost?")
+    wait_terminal(client, first["invocation_id"])
+    end = time.monotonic() + 10
+    while not [e for e in client.get(f"/v1/runs/{run}/events").json() if e["op"] == "write"]:
+        assert time.monotonic() < end, "the researcher's answer was never saved"
+        time.sleep(0.1)
+
+    second = ask("writer", "Write one line about the bottle.")
+    wait_terminal(client, second["invocation_id"])
+    prompt = client.get(f"/v1/invocations/{second['invocation_id']}").json()["user_prompt"]
+    assert prompt.startswith("Write one line about the bottle.") and "## facts (v" in prompt and "by researcher" in prompt
+    end = time.monotonic() + 10
+    while len([e for e in client.get(f"/v1/runs/{run}/events").json() if e["op"] == "write"]) < 2:
+        assert time.monotonic() < end, "the writer's answer was never saved"
+        time.sleep(0.1)
+    ops = [(e["agent"], e["op"], e["fact_key"]) for e in client.get(f"/v1/runs/{run}/events").json()]
+    assert ops == [("researcher", "write", "facts"), ("writer", "read", "facts"), ("writer", "write", "draft")]
+    # an agent the design doesn't know reads nothing and leaves no stray reads behind
+    assert client.post("/v1/agents/ghost/invoke", json={"run_id": run, "prompt": "x"}).status_code == 404
+    assert len(client.get(f"/v1/runs/{run}/events").json()) == 3
+
+
 def test_new_project_refuses_unknown_agents_before_creating_anything(client):  # noqa: F811
     r = new_project(client, tasks=[{"agent": "ghost", "task": "Haunt"}])
     assert r.status_code == 404

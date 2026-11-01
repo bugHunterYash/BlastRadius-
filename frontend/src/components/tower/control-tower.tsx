@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { AgentAccess } from "./agent-access"
+import { FolderAccess } from "./folder-access"
 import { CommandMenu } from "./command-menu"
 import { Workspace } from "./graph-panel"
 import { DetailsDrawer } from "./panel"
@@ -21,6 +22,7 @@ export function ControlTower({ user = null }: { user?: SignedInUser | null }) {
         <Screen />
         <NewProject />
         <AgentAccess />
+        <FolderAccess />
       </TowerProvider>
     </UserContext.Provider>
   )
@@ -48,7 +50,7 @@ function Screen() {
 }
 
 function Waiting() {
-  const { state, setNewProjectOpen, setAccessOpen } = useTower()
+  const { state, setNewProjectOpen, setAccessOpen, setFoldersOpen } = useTower()
   const copy = {
     connecting: { icon: "progress_activity", title: "Connecting to the Control Tower", body: "Loading your agents’ runs from the backend…" },
     offline: { icon: "cloud_off", title: "The backend isn’t reachable", body: "Start the tower API (port 8010), then try again. Nothing is shown until real data loads." },
@@ -67,6 +69,7 @@ function Waiting() {
             <>
               <Button className="bg-cobalt text-white hover:bg-cobalt/90" onClick={() => setNewProjectOpen(true)}>New project</Button>
               <Button variant="outline" onClick={() => setAccessOpen(true)}>Connect agents</Button>
+              <Button variant="outline" onClick={() => setFoldersOpen(true)}>Allow folders</Button>
             </>
           )}
         </div>

@@ -229,6 +229,42 @@ def test_a_hidden_chat_is_removed_and_never_synced_again(client, monkeypatch, tm
     assert c.post(f"/v1/live/sessions/{chat['invocation_id']}/hide", headers=AUTH).status_code == 404
 
 
+def test_only_chats_in_allowed_folders_are_synced(client, monkeypatch, tmp_path):
+    import json
+    import sqlite3
+    from app.config import settings
+    c, *_ = client
+    project = tmp_path / "shop app"
+    project.mkdir()
+    _agy_index(tmp_path / "agy", status="CASCADE_RUN_STATUS_IDLE")
+    db = sqlite3.connect(tmp_path / "agy" / "conversation_summaries.db")
+    db.execute("UPDATE conversation_summaries SET workspace_uris = ? WHERE conversation_id = 'agy-1'", (json.dumps([project.as_uri()]),))
+    db.commit()
+    db.close()
+    monkeypatch.setattr(settings, "ANTIGRAVITY_DIR", str(tmp_path / "agy"))
+    monkeypatch.setattr(settings, "LIVE_SYNC_ALLOWED_FOLDERS_ONLY", True)
+    titles = lambda: [s["title"] for s in c.get("/v1/live/sessions", headers=AUTH).json()]  # noqa: E731
+
+    # a new install allows no folder: nothing is synced, the folder is only offered (by path)
+    c.post("/v1/live/sync", headers=AUTH)
+    assert titles() == []
+    listing = c.get("/v1/folders", headers=AUTH).json()
+    assert listing["allowed"] == [] and str(project.resolve()) in [f["path"] for f in listing["suggested"]]
+    assert c.get("/v1/folders", headers=NO_TOKEN).status_code == 401
+
+    assert c.post("/v1/folders/allow", headers=AUTH, json={"path": str(tmp_path / "nope")}).status_code == 422
+    r = c.post("/v1/folders/allow", headers=AUTH, json={"path": str(project), "by": "me@example.com"})
+    assert r.status_code == 201 and r.json()["name"] == "shop app"
+    assert titles() == ["Plan the release"]                    # synced right away
+    assert str(project.resolve()) not in [f["path"] for f in c.get("/v1/folders", headers=AUTH).json()["suggested"]]
+
+    # removing the folder removes its chats from the tower, and they don't come back
+    assert c.post("/v1/folders/remove", headers=AUTH, json={"path": str(project)}).json()["removed"] == 1
+    c.post("/v1/live/sync", headers=AUTH)
+    assert titles() == []
+    assert c.post("/v1/folders/remove", headers=AUTH, json={"path": str(project)}).status_code == 404
+
+
 def test_project_folder_can_be_added_only_where_a_synced_session_works(client, monkeypatch, tmp_path):
     import json
     import sqlite3

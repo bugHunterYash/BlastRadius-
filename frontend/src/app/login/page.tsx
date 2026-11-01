@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { auth, authEnabled, signIn } from "@/auth"
+import { auth, authEnabled, authRequired, signIn } from "@/auth"
 
 export const dynamic = "force-dynamic"
 export const metadata = { title: "Sign in · Agent Control Tower" }
@@ -40,6 +40,11 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
               Continue with Google
             </button>
           </form>
+        ) : authRequired ? (
+          <p className="mt-6 text-[13.5px] text-muted-foreground">
+            Sign-in is required here, but Google sign-in isn’t set up on this server yet. Ask the owner to add the
+            Google OAuth client (AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET).
+          </p>
         ) : (
           <div className="mt-6 text-[13.5px] text-muted-foreground">
             Google sign-in isn’t set up on this server yet, so the dashboard is open on this machine only.

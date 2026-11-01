@@ -114,6 +114,20 @@ export interface NewProjectBody {
   in_order?: boolean
 }
 
+export interface AllowedFolder {
+  path: string
+  name: string
+  allowed_by: string | null
+  allowed_at: string
+}
+
+export interface FolderListing {
+  /** false when the server syncs every folder (LIVE_SYNC_ALLOWED_FOLDERS_ONLY=false) */
+  enforced: boolean
+  allowed: AllowedFolder[]
+  suggested: { path: string; apps: string[]; last_seen: string }[]
+}
+
 export interface Project {
   workspace_id: string
   path: string
@@ -208,6 +222,10 @@ export const api = {
   invocation: (id: string) => req<Invocation>(`/v1/invocations/${id}`),
   /** Chats synced live from the Claude app / Claude Code and the Codex app. */
   liveSessions: (limit = 12) => req<LiveSession[]>(`/v1/live/sessions?limit=${limit}`),
+  /** Folders the tower may show chats from, and the ones the apps work in that aren't allowed yet. */
+  folders: () => req<FolderListing>("/v1/folders"),
+  allowFolder: (path: string, by?: string | null) => req<AllowedFolder>("/v1/folders/allow", { method: "POST", body: JSON.stringify({ path, by: by ?? null }) }),
+  removeFolder: (path: string) => req<{ removed: number }>("/v1/folders/remove", { method: "POST", body: JSON.stringify({ path }) }),
   /** Remove a synced chat from the tower for good (it stays in its own app). */
   hideSession: (invocationId: string) => req<{ hidden: boolean; title: string | null }>(`/v1/live/sessions/${invocationId}/hide`, { method: "POST" }),
   stepsAfter: (invocationId: string, after: number) =>

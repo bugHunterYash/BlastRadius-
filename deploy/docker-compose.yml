@@ -87,6 +87,8 @@ services:
       AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
       AUTH_SECRET: ${AUTH_SECRET:-}
       AUTH_ALLOWED_EMAILS: ${AUTH_ALLOWED_EMAILS:-}
+      # the server never opens the dashboard without Google sign-in
+      AUTH_REQUIRED: "true"
       AUTH_URL: https://${DOMAIN}
 
   caddy:

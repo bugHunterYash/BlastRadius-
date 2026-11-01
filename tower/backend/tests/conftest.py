@@ -31,6 +31,7 @@ os.environ.update(
     MEKO_MCP_URL="", TOWER_INGEST_TOKEN="test-token", TOWER_API_TOKEN="", APPLY_GIT_COMMIT="false",
     AGENT_WORKSPACE_ROOT=str(WORKSPACES), AGENT_WORKSPACES="", CLAUDE_RUNTIME_ENABLED="true",
     CODEX_RUNTIME_ENABLED="true", REPLAY_RUNTIME_ENABLED="false", CLAUDE_AGENT_MODEL="", CODEX_MODEL="", LIVE_SYNC_ENABLED="false",
+    LIVE_SYNC_ALLOWED_FOLDERS_ONLY="false",  # test_live_sync turns the folder rule on where it checks it
     ANTIGRAVITY_BIN=str(WORKSPACES / "no-agy"), ANTIGRAVITY_DIR=str(WORKSPACES / "no-antigravity"),
 )
 

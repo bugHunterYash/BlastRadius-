@@ -8,11 +8,11 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import briefs, db, execution, pipeline
+from app import briefs, db, execution, pipeline, team_memory
 from app.runtime import auth as agent_auth
 from app.agents import fixer, summarizer
 from app.config import DEV_TOKEN, settings
-from app import live_sync, projects
+from app import folders, live_sync, projects
 from app.routers import (agents, approvals, blast, blastx, design, events, issues, notebook, runs, sessions, stream,
                          timeline)
 
@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
         log.warning("TOWER_INGEST_TOKEN is the dev default; set a real secret before deploying")
     await db.init()
     await projects.load()
+    await folders.load()
     task = pipeline.start()
     execution.start()
     if n := await execution.recover_interrupted():
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI):
     yield
     await live_sync.shutdown(syncing)
     await briefs.shutdown()
+    await team_memory.shutdown()
     await execution.shutdown()
     await agent_auth.shutdown()
     task.cancel()

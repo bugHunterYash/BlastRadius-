@@ -153,6 +153,14 @@ Not tried on a real server yet.
 
 ## 6. What's built and verified with real runs
 
+- **Folders must be allowed:** live sync imports a chat only when its folder is on the allowed list
+  (`app/folders.py`, migration 008, `LIVE_SYNC_ALLOWED_FOLDERS_ONLY`, on by default). A new install allows none,
+  so nothing personal shows until someone signs in and picks folders (sidebar "Folders", or the "Allow a folder"
+  prompt). Folders the apps work in are offered by path only. Removing a folder removes its chats from the tower.
+  Allowed on 1 Nov: `Documents\cbs` and `Documents\cbs final`.
+- **Sign-in is required on a server:** `AUTH_REQUIRED` defaults to true in production (and is forced in
+  `deploy/docker-compose.yml`); without Google keys the dashboard and API stay locked. In dev without keys it
+  stays open on localhost. Checked both: locked mode sends `/dashboard` to `/login`, the API answers 401.
 - **Only this account's chats:** Antigravity keeps every account's chats in one index; only the signed-in
   account's belong to an Antigravity project, so sync reads just those (`ANTIGRAVITY_PROJECT_CHATS_ONLY`). Any
   synced chat can be hidden for good with "Hide from tower" (table `hidden_chats`, migration 007); Yash hid the
@@ -182,7 +190,9 @@ Not tried on a real server yet.
    then a handoff. Every call is a memory event with its version, so the graph, detectors and summary work on
    project runs. "One after another" (`in_order`, on by default in the UI) makes each part wait for the one
    before. Verified with a real Codex → Claude run (writer read `facts v21`, wrote `draft v27`, no issues).
-   Still open: chat @tags and the workspace "Assign work" panel don't use the shared memory yet.
+   Chat questions (run `chat-<date>`) and the workspace "Assign work" panel (run `project-<id>`) share it
+   too: the first message of a conversation gets the facts that agent may read, and every answer is saved
+   (`team_memory.follow`). Verified live: in chat, Writer (Claude) read the Researcher's `facts v23` from Meko.
 2. **BlastRadius engine bug:** live experiments save **0 metric buckets** (suspected aggregator/sample
    time mismatch in the engine repo), so the Pro "real load" test can't produce a report yet.
 3. **Pro flow:** run a real experiment from the BlastX tab (create → start → report → fix prompt), then the

@@ -65,6 +65,12 @@ async def recall(run_id: str, agent: str, design: dict) -> tuple[str, list[str]]
             + "\n\n".join(parts)), ids
 
 
+async def untie_reads(event_ids: list[str]) -> None:
+    """Drop reads made for a task that then couldn't start."""
+    if event_ids:
+        await db.pool.execute("DELETE FROM events WHERE event_id = ANY($1::uuid[])", [uuid.UUID(i) for i in event_ids])
+
+
 async def tie_reads(event_ids: list[str], invocation_id: str) -> None:
     """Link the reads made for a task to that task, once it has an id."""
     if event_ids:
@@ -92,3 +98,40 @@ async def remember(run_id: str, agent: str, text: str, design: dict, *, invocati
         await emit(run_id, agent, "handoff", invocation_id=invocation_id, target_agent=next_agent,
                    reason=f"Done; {key} is ready for {next_agent}")
     return {"fact_key": key, "version": stored["version"], "meko_ref": ref}
+
+
+# ---------- one-off tasks (chat questions, "Assign work" in a project workspace) ----------
+
+_following: set = set()      # tasks waiting to save an answer, kept so they aren't garbage-collected
+
+
+def shares_memory(run_id: str) -> bool:
+    """Runs whose single tasks share the team memory: the chat's day run and a project workspace's run.
+    (New project runs do it in app.briefs, with handoffs between the parts.)"""
+    return run_id.startswith(("chat-", "project-"))
+
+
+def follow(run_id: str, agent: str, invocation_id: str, design: dict) -> None:
+    """When the task finishes, save its answer to the shared memory (no handoff: nobody is next)."""
+    import asyncio
+
+    from app import execution
+
+    async def run() -> None:
+        try:
+            done = await execution.wait(invocation_id)
+            if done and done["status"] == "completed" and done.get("final_response"):
+                await remember(run_id, agent, done["final_response"], design, invocation_id=invocation_id, next_agent=None)
+        except Exception:
+            log.exception("couldn't save %s's answer in %s to the shared memory", agent, run_id)
+
+    task = asyncio.create_task(run())
+    _following.add(task)
+    task.add_done_callback(_following.discard)
+
+
+async def shutdown() -> None:
+    import asyncio
+    for t in list(_following):
+        t.cancel()
+    await asyncio.gather(*_following, return_exceptions=True)

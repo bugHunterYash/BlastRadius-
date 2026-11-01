@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     LIVE_SYNC_INTERVAL_S: float = 5.0
     LIVE_SYNC_LIMIT: int = 20             # newest sessions/threads per app per pass
     LIVE_SYNC_CLAUDE_DIR: str = ""        # only sessions under this project dir; empty = all projects
+    # only chats working in a folder the person allowed (app.folders); a new install allows none
+    LIVE_SYNC_ALLOWED_FOLDERS_ONLY: bool = True
 
     AGENT_WORKSPACE_ROOT: Path = TOWER_ROOT / "workspaces"
     AGENT_WORKSPACES: str = ""            # optional comma list; empty = any directory under the root
