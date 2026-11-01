@@ -219,9 +219,13 @@ export const chatRun = () => `chat-${new Date().toISOString().slice(0, 10)}`
 /** Chats synced from the Claude, Codex and Antigravity apps: shown under Live sessions, never as runs. */
 export const isSyncedRun = (runId: string) => /^(claude-session-|codex-thread-|antigravity-)/.test(runId)
 
-/** The run asked for, else the one that shows the most, with everything the views need. */
+/** Runs made by scripts instead of real agents: scripted demo team (demo-), detector scenarios (scn-) and
+ *  recorded transcripts (replay-). They stay in the database for tests, but the UI shows only real work. */
+export const isScriptedRun = (runId: string) => /^(demo-|scn-|replay-)/.test(runId)
+
+/** The run asked for, else the real run that shows the most, with everything the views need. */
 export async function loadSnapshot(runId?: string): Promise<Snapshot | null> {
-  const all = await api.runs()
+  const all = (await api.runs()).filter((r) => !isScriptedRun(r.run_id))
   // the graph is about shared memory: skip runs without memory events (chat questions, imported sessions).
   // Open first on the run with the most problems caught, then the most steps; the newest wins a tie.
   const runs = all

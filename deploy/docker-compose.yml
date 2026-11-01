@@ -82,6 +82,12 @@ services:
       TOWER_API_URL: http://tower-api:8010
       TOWER_API_TOKEN: ${TOWER_API_TOKEN}
       TOWER_ALLOWED_HOSTS: ${DOMAIN}
+      # Google sign-in for /dashboard (optional; see frontend/.env.example)
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_ALLOWED_EMAILS: ${AUTH_ALLOWED_EMAILS:-}
+      AUTH_URL: https://${DOMAIN}
 
   caddy:
     image: caddy:2.10-alpine

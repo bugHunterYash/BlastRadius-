@@ -1,5 +1,6 @@
-import { ControlTower } from "@/components/tower/control-tower"
+import { redirect } from "next/navigation"
 
+// The landing page goes here; until then the root opens the dashboard (which asks for sign-in if it's set up).
 export default function Home() {
-  return <ControlTower />
+  redirect("/dashboard")
 }

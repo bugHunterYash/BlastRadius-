@@ -35,6 +35,7 @@ This repo is **in active development** for the hackathon. Honest snapshot:
 | Agents writing their findings to Meko | Done for New project runs (each agent reads the last one's findings) |
 | Cloud deploy (`deploy/`: Docker Compose, Caddy, setup script) | Written, not tried on a server yet |
 | Landing page and waitlist (`landing/`) | Built |
+| Dashboard at `/dashboard` with Google sign-in (allow-listed emails), only real data shown | Built; turns on with a Google OAuth client id and secret |
 | Gemini agent, `br` CLI | Not started |
 
 Details: [docs/HANDOFF.md](docs/HANDOFF.md) (current) and [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md) (older engine audit).

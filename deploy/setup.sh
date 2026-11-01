@@ -48,6 +48,7 @@ if [ ! -f "$ENV" ]; then
       -e "s|^DB_PASSWORD=.*|DB_PASSWORD=$(rnd)|" \
       -e "s|^TOWER_API_TOKEN=.*|TOWER_API_TOKEN=$(rnd)|" \
       -e "s|^TOWER_INGEST_TOKEN=.*|TOWER_INGEST_TOKEN=$(rnd)|" \
+      -e "s|^AUTH_SECRET=.*|AUTH_SECRET=$(rnd)|" \
       "$ROOT/tower/deploy/.env.example" > "$ENV"
   chmod 600 "$ENV"
   echo "Wrote $ENV. Add MEKO_API_KEY there if you use Meko, then re-run this script."

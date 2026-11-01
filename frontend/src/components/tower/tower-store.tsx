@@ -47,6 +47,8 @@ interface State {
   searchOpen: boolean
   /** where the data comes from: the bundled sample, or the live backend */
   source: Source
+  /** before the first real run loads: still connecting, backend unreachable, or no runs yet */
+  backend: "connecting" | "offline" | "empty" | "ok"
   /** the run on screen; bumps `loaded` whenever its data is replaced */
   runId: string
   loaded: number
@@ -78,6 +80,7 @@ type Action =
   | { type: "newProject"; open: boolean }
   | { type: "load"; issues: Issue[]; calls: MekoCall[]; runId: string; sameRun: boolean }
   | { type: "access"; open: boolean }
+  | { type: "backend"; backend: State["backend"] }
   | { type: "session"; agent: string; sessionId: string | null }
 
 const homeOf = (runId: string): View => ({ kind: "run", id: runId })
@@ -102,6 +105,7 @@ const initial: State = {
   highlight: null,
   searchOpen: false,
   source: "sample",
+  backend: "connecting",
   runId: "run-42",
   loaded: 0,
   accessOpen: false,
@@ -201,12 +205,14 @@ function reducer(s: State, a: Action): State {
       }
       const calls = [...byId.values()].sort((x, y) => new Date(x.ts).getTime() - new Date(y.ts).getTime())
       const chatSessions = { ...CHAT_SESSIONS, ...s.chatSessions }
-      const base = { ...s, source: "live" as const, issues: a.issues, calls, chatSessions, runId: a.runId, loaded: s.loaded + 1 }
+      const base = { ...s, source: "live" as const, backend: "ok" as const, issues: a.issues, calls, chatSessions, runId: a.runId, loaded: s.loaded + 1 }
       if (a.sameRun && s.mode === "replay") return base
       const view = a.sameRun ? s.view : homeOf(a.runId)
       return { ...base, view, history: a.sameRun ? s.history : [], mode: s.mode === "trace" && a.sameRun ? s.mode : "graph",
                trace: a.sameRun ? s.trace : null, replayN: EVENTS.length, playing: false }
     }
+    case "backend":
+      return { ...s, backend: a.backend }
     case "access":
       return { ...s, accessOpen: a.open }
     case "session": {
@@ -286,12 +292,15 @@ export function TowerProvider({ children }: { children: ReactNode }) {
   const setNewProjectOpen = useCallback((open: boolean) => dispatch({ type: "newProject", open }), [])
   const setAccessOpen = useCallback((open: boolean) => dispatch({ type: "access", open }), [])
 
-  /** Load a run from the backend (the one that shows the most when runId is omitted). Falls back to the sample if it's down. */
+  /** Load a run from the backend (the one that shows the most when runId is omitted). Nothing fake is shown while it can't load. */
   const retries = useRef(0)
   const load = useCallback(async (runId?: string) => {
     try {
       const snap = await loadSnapshot(runId ?? runRef.current ?? undefined)
-      if (!snap) return
+      if (!snap) {
+        if (runRef.current === null) dispatch({ type: "backend", backend: "empty" })
+        return
+      }
       retries.current = 0
       const sameRun = runRef.current === snap.runId
       runRef.current = snap.runId
@@ -303,7 +312,7 @@ export function TowerProvider({ children }: { children: ReactNode }) {
       if (SOURCE === "sample" && runRef.current === null && retries.current < 10) {
         retries.current += 1
         setTimeout(() => void loadRef.current(runId), 3000)
-      }
+      } else if (runRef.current === null) dispatch({ type: "backend", backend: "offline" })
     }
   }, [])
   const loadRef = useRef(load)

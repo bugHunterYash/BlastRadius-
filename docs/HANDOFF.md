@@ -28,7 +28,7 @@ and later runs a real chaos test under load as the Pro tier.
 | This repo (nested git repo) | `C:\Users\F(x)ash\Documents\cbs\.claude\worktrees\blastradius-simulator-e244a7\blastradius` |
 | Working branch | `feature/control-tower-live`, already merged into `main` (PR #3). Start new work on a fresh branch from `public/main`. |
 | Remote to push to | **`public`** = `github.com/bugHunterYash/BlastRadius-`. **Not `origin`** (`sanchigoyal73/blastradius1`, unrelated history). |
-| Branches on `public` | `main` (`35ee1c6`); `feature/control-tower-live` and `feature/control-tower-frontend` (both merged); `feature/google-auth` (open [PR #2](https://github.com/bugHunterYash/BlastRadius-/pull/2), see §7). |
+| Branches on `public` | `main` (`35ee1c6`); `feature/control-tower-live` and `feature/control-tower-frontend` (both merged); `feature/google-auth` (open [PR #2](https://github.com/bugHunterYash/BlastRadius-/pull/2), see §7); `feature/team-memory-and-ui-fixes` (open [PR #4](https://github.com/bugHunterYash/BlastRadius-/pull/4): Meko team memory, UI fixes, deploy, real data only, `/dashboard`, Google sign-in). |
 | Engine repo (BlastRadius engine on :8000) | `C:\Users\F(x)ash\Documents\cbs final`, branch `feat/yash-YA-08`, commit `dc49ffc` (fault path fixes). Its remote is the same GitHub repo, but **this branch is not pushed yet**. Teammates' uncommitted `Makefile` and `tests/integration/test_load_parity.py` there are **not ours: don't touch**. |
 | Team | Sanchi and Harshit own frontend pages in the engine repo; Ayush owns `core/controller`, `core/faults`, `core/analysis`, `core/store` and the agent. |
 
@@ -95,6 +95,23 @@ and later runs a real chaos test under load as the Pro tier.
 `live-sessions.tsx`, `agent-access.tsx`, `sidebar.tsx`, `tower-store.tsx` (state).
 `lib/api.ts` (all API calls), `lib/data.ts` (live data bindings).
 
+**Routes:** `/` is free for the landing page (today it redirects to `/dashboard`); the app is at
+**`/dashboard`**; `/login` is the sign-in page. A landing page's "Log in" / "Try it out" button should link to
+`/dashboard` (it sends people to `/login` first when sign-in is on, and back after).
+
+**Only real data:** the UI never shows the bundled sample (`lib/sample-data.ts` stays for types and project
+templates). Until a run loads it shows "Connecting", "The backend isn't reachable" or "No runs yet".
+Scripted runs (`demo-`, `scn-`, `replay-`) stay in the database for tests but are hidden from the UI.
+
+**Google sign-in** (Auth.js v5, `next-auth@5.0.0-beta.32`, taken from Ayush's PR #2 and finished):
+`src/auth.ts`, `src/middleware.ts` (guards `/dashboard` and `/api/tower/*`), `src/app/login/page.tsx`,
+`components/tower/user-menu.tsx`. It is **off until** `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are set in
+`frontend/.env.local` (git-ignored; `AUTH_SECRET` and `AUTH_ALLOWED_EMAILS` are already there). Only emails in
+`AUTH_ALLOWED_EMAILS` can sign in, since the dashboard drives agents on this machine. Google Cloud Console
+redirect URI: `http://localhost:3100/api/auth/callback/google` (plus `https://<domain>/api/auth/callback/google`
+in the cloud). Checked with placeholder keys: `/dashboard` → `/login`, the API → 401. The real Google round
+trip needs the real client id and secret.
+
 ### Design (`tower/design/design.json`)
 Agents: researcher (Codex), writer (Claude), reviewer (Claude), publisher (Codex), analyst (Antigravity).
 Push changes (from `tower/`, with `TOWER_API_TOKEN` or `TOWER_INGEST_TOKEN` in env):
@@ -110,7 +127,7 @@ ollama serve ; ollama pull qwen2.5:0.5b
 # Backend :8010  (from the worktree root)
 blastradius/tower/.venv/Scripts/python.exe -m uvicorn app.main:app --app-dir blastradius/tower/backend --host 127.0.0.1 --port 8010
 # UI :3100
-$env:TOWER_API_URL="http://127.0.0.1:8010"; $env:PORT="3100"; npm --prefix blastradius/frontend run dev
+$env:TOWER_API_URL="http://127.0.0.1:8010"; $env:PORT="3100"; npm --prefix blastradius/frontend run dev   # then open http://localhost:3100/dashboard
 # BlastRadius engine :8000 and the demo stack run in Docker (blastradius-backend-1, blastradius-demo-*)
 ```
 The same commands are in the worktree's `.claude/launch.json` (`tower-api`, `tower-ui`).
@@ -172,7 +189,8 @@ Not tried on a real server yet.
    and the `frontend/next.config.ts` change, and push, so the `curl …/deploy/setup.sh` link in DEPLOY.md
    works. (b) Push the engine branch `feat/yash-YA-08` (or merge it into `main` and run with
    `ENGINE_BRANCH=main`): `setup.sh` clones it from GitHub and fails today. (c) Try it once on a real server.
-7. **PR #2 (`feature/google-auth`, a teammate's) is not safe to merge as is.** It moves `core/graph` to
+7. **PR #2 (`feature/google-auth`, a teammate's) is not safe to merge as is.** Its sign-in part is already in PR #4
+   (finished: guarded routes, allow-list, no tokens kept in the cookie), so PR #2 can be closed after #4 merges. It moves `core/graph` to
    `core/analysis/graph` but keeps the `core.graph` imports (in the moved `__init__.py` and in
    `backend/app/api/architecture.py`), so the engine's architecture API fails to import. It also
    conflicts with `main` in `backend/app/main.py` (it branched before PR #3), hard-codes a Google client ID
