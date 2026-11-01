@@ -328,15 +328,26 @@ def _split(body: str, offsets_blob) -> list[tuple[int, str]]:
     return out
 
 
+def _agy_index():
+    db_path = agy_dir() / "conversation_summaries.db"
+    return sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, timeout=5) if db_path.is_file() else None
+
+
+# chats of the signed-in account belong to one of its projects; an earlier account's chats have none
+_THIS_ACCOUNT = "AND project_id != ''"
+
+
 def read_antigravity(limit: int) -> list[dict]:
     """Newest top-level chats from Antigravity's own index, opened read-only."""
-    db_path = agy_dir() / "conversation_summaries.db"
-    if not db_path.is_file():
+    conn = _agy_index()
+    if conn is None:
         return []
-    with contextlib.closing(sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, timeout=5)) as c:
+    mine = _THIS_ACCOUNT if settings.ANTIGRAVITY_PROJECT_CHATS_ONLY else ""
+    with contextlib.closing(conn) as c:
         rows = c.execute(
             "SELECT conversation_id, title, preview, step_count, last_modified_time, workspace_uris, status "
-            "FROM conversation_summaries WHERE nesting_depth = 0 ORDER BY last_modified_time DESC LIMIT ?", (limit,)).fetchall()
+            f"FROM conversation_summaries WHERE nesting_depth = 0 {mine} ORDER BY last_modified_time DESC LIMIT ?",
+            (limit,)).fetchall()
         out = []
         for cid, title, preview, steps, modified, uris, status in rows:
             try:
@@ -370,6 +381,39 @@ def normalize_antigravity(chunks, running: bool = False) -> tuple[list[tuple[str
             last = text
             events.append(("message.completed", None, {"text": text, "step": step}))
     return events, {"first_prompt": first, "final_response": last}
+
+
+def other_account_chats() -> set[str]:
+    """Ids of Antigravity chats that aren't the signed-in account's (see ANTIGRAVITY_PROJECT_CHATS_ONLY)."""
+    conn = _agy_index() if settings.ANTIGRAVITY_PROJECT_CHATS_ONLY else None
+    if conn is None:
+        return set()
+    with contextlib.closing(conn) as c:
+        return {r[0] for r in c.execute(f"SELECT conversation_id FROM conversation_summaries WHERE NOT (1 = 1 {_THIS_ACCOUNT})")}
+
+
+async def forget_other_account_chats() -> int:
+    """Remove the tower's copies of chats synced before they were recognised as another account's.
+    Only the tower's own rows go; Antigravity's files are never touched."""
+    ids = await asyncio.to_thread(other_account_chats)
+    if not ids:
+        return 0
+    rows = await db.pool.fetch(
+        "DELETE FROM agent_invocations WHERE runtime = $1 AND provider_thread_id = ANY($2::text[]) RETURNING run_id",
+        AGY_RUNTIME, list(ids))                    # their steps go with them (ON DELETE CASCADE)
+    runs = list({r["run_id"] for r in rows})
+    if runs:
+        await db.pool.execute("DELETE FROM agent_sessions WHERE run_id = ANY($1::text[]) AND provider = 'antigravity' "
+                              "AND NOT EXISTS (SELECT 1 FROM agent_invocations i WHERE i.session_id = agent_sessions.session_id)", runs)
+        await db.pool.execute(
+            """DELETE FROM runs r WHERE r.run_id = ANY($1::text[])
+                 AND NOT EXISTS (SELECT 1 FROM agent_invocations i WHERE i.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM agent_sessions s WHERE s.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM events e WHERE e.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM issues x WHERE x.run_id = r.run_id)
+                 AND NOT EXISTS (SELECT 1 FROM digests d WHERE d.run_id = r.run_id)""", runs)
+        log.info("removed %d synced Antigravity chat(s) from another account", len(rows))
+    return len(rows)
 
 
 async def sync_antigravity(skip: set[str]) -> list[dict]:
@@ -421,6 +465,10 @@ async def sync_once() -> list[dict]:
 
 
 async def run_forever() -> None:
+    try:
+        await forget_other_account_chats()
+    except Exception:
+        log.exception("couldn't remove other accounts' synced chats")
     while True:
         try:
             await sync_once()

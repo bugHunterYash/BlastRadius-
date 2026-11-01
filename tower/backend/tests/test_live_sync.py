@@ -144,12 +144,16 @@ def _agy_index(root, status="CASCADE_RUN_STATUS_RUNNING_GENERATOR"):
     root.mkdir(parents=True, exist_ok=True)
     c = sqlite3.connect(root / "conversation_summaries.db")
     c.execute("CREATE TABLE conversation_summaries (conversation_id text, title text, preview text, step_count integer, "
-              "last_modified_time datetime, workspace_uris text, status text, nesting_depth integer)")
+              "last_modified_time datetime, workspace_uris text, status text, nesting_depth integer, project_id text)")
     c.execute("CREATE TABLE conversations_fts_content (id INTEGER PRIMARY KEY, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, "
               "c10, c11, c12, c13, c14)")
-    c.execute("INSERT INTO conversation_summaries VALUES (?, ?, '', 4, ?, ?, ?, 0)",
+    c.execute("INSERT INTO conversation_summaries VALUES (?, ?, '', 4, ?, ?, ?, 0, 'project-1')",
               ("agy-1", "Plan the release", "2026-11-01 04:10:00.5+00:00",
                json.dumps(["file:///c%3A/Users/me/Documents/shop%20app"]), status))
+    # a chat from an earlier Antigravity account on this machine: it belongs to no project
+    c.execute("INSERT INTO conversation_summaries VALUES ('agy-old', 'Old account chat', '', 2, ?, ?, "
+              "'CASCADE_RUN_STATUS_IDLE', 0, '')",
+              ("2026-10-01 09:00:00+00:00", json.dumps(["file:///c%3A/Users/me/Documents/old%20project"])))
     user, agent = "Plan the release\nAlso check पृष्ठ", "Here is the plan.\nDone: release notes drafted."
     first_agent = len("Here is the plan.\n".encode())
     second_user = len("Plan the release\n".encode())
@@ -185,6 +189,27 @@ def test_antigravity_chats_are_synced(client, monkeypatch, tmp_path):
     assert inv["status"] == "completed" and inv["metadata"]["cwd"].endswith("shop app")
     again = c.post("/v1/live/sync", headers=AUTH).json()["changes"]
     assert not [x for x in again if x["provider"] == "antigravity"]               # nothing new, nothing written
+
+
+def test_only_the_signed_in_accounts_antigravity_chats_are_synced(client, monkeypatch, tmp_path):
+    from app import live_sync
+    from app.config import settings
+    c, *_ = client
+    _agy_index(tmp_path / "agy", status="CASCADE_RUN_STATUS_IDLE")
+    monkeypatch.setattr(settings, "ANTIGRAVITY_DIR", str(tmp_path / "agy"))
+
+    # an older tower synced every chat in the index, the other account's too
+    monkeypatch.setattr(settings, "ANTIGRAVITY_PROJECT_CHATS_ONLY", False)
+    c.post("/v1/live/sync", headers=AUTH)
+    titles = lambda: sorted(s["title"] for s in c.get("/v1/live/sessions", headers=AUTH).json() if s["app"] == "antigravity")  # noqa: E731
+    assert titles() == ["Old account chat", "Plan the release"]
+
+    monkeypatch.setattr(settings, "ANTIGRAVITY_PROJECT_CHATS_ONLY", True)
+    assert c.portal.call(live_sync.forget_other_account_chats) == 1
+    assert titles() == ["Plan the release"]
+    assert not [r for r in c.get("/v1/runs?limit=200", headers=AUTH).json() if r["run_id"] == "antigravity-agy-old"]
+    c.post("/v1/live/sync", headers=AUTH)
+    assert titles() == ["Plan the release"]                                   # and it doesn't come back
 
 
 def test_project_folder_can_be_added_only_where_a_synced_session_works(client, monkeypatch, tmp_path):

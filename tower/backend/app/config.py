@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     ANTIGRAVITY_BIN: str = ""            # empty = `agy` on PATH, else ~/.gemini/bin/agy
     ANTIGRAVITY_MODEL: str = "gemini-3.8-flash-medium"
     ANTIGRAVITY_DIR: str = ""            # where Antigravity keeps chats; empty = ~/.gemini/antigravity
+    # Antigravity keeps every account's chats in one local index; only the signed-in account's chats belong to
+    # one of its projects, so older accounts' chats (no project) aren't synced
+    ANTIGRAVITY_PROJECT_CHATS_ONLY: bool = True
     CODEX_BIN: str = "codex"
     CODEX_MODEL: str = ""                 # empty = Codex's configured default
     CODEX_SANDBOX: str = "workspace-write"
