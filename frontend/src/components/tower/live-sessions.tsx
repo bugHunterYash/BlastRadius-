@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
@@ -44,11 +45,12 @@ export const sessionTitle = (s: { title?: string | null; run_id: string }) =>
   (s.title || "").replace(/\s+/g, " ").trim() || s.run_id
 
 /** One synced chat, step by step, following along while it runs in the other app. */
-export function LiveSessionView({ id, onOpenWorkspace }: { id: string; onOpenWorkspace?: (folder: string) => void }) {
+export function LiveSessionView({ id, onOpenWorkspace, onHidden }: { id: string; onOpenWorkspace?: (folder: string) => void; onHidden?: () => void }) {
   const [inv, setInv] = useState<(Invocation & { metadata?: Record<string, unknown>; created_at?: string }) | null>(null)
   const [events, setEvents] = useState<ApiExecEvent[]>([])
   const [error, setError] = useState<string | null>(null)
   const [all, setAll] = useState(false)
+  const [hiding, setHiding] = useState(false)
   const last = useRef(0)
   const end = useRef<HTMLDivElement>(null)
 
@@ -108,12 +110,36 @@ export function LiveSessionView({ id, onOpenWorkspace }: { id: string; onOpenWor
           <dt className="text-muted-foreground">Steps</dt>
           <dd className="tabular-nums">{calls.length}</dd>
         </dl>
-        {onOpenWorkspace && typeof meta.cwd === "string" && (
-          <Button className="w-fit gap-1.5 bg-cobalt text-white hover:bg-cobalt/90" onClick={() => onOpenWorkspace(meta.cwd as string)}>
-            <Icon name="space_dashboard" size={18} />
-            Open workspace
+        <div className="flex flex-wrap gap-2">
+          {onOpenWorkspace && typeof meta.cwd === "string" && (
+            <Button className="w-fit gap-1.5 bg-cobalt text-white hover:bg-cobalt/90" onClick={() => onOpenWorkspace(meta.cwd as string)}>
+              <Icon name="space_dashboard" size={18} />
+              Open workspace
+            </Button>
+          )}
+          {/* e.g. a chat from an earlier account: gone from the tower, still in its own app */}
+          <Button
+            variant="outline"
+            className="w-fit gap-1.5 text-muted-foreground"
+            disabled={hiding}
+            onClick={() => {
+              setHiding(true)
+              api.hideSession(id).then(
+                () => {
+                  toast.success("Chat hidden", { description: "It won’t sync to the tower again. It’s still in its own app." })
+                  onHidden?.()
+                },
+                (e: Error) => {
+                  setHiding(false)
+                  toast.error("Couldn’t hide the chat", { description: e.message })
+                },
+              )
+            }}
+          >
+            <Icon name="visibility_off" size={18} />
+            Hide from tower
           </Button>
-        )}
+        </div>
       </header>
 
       {calls.length > shown.length && (

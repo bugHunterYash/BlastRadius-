@@ -7,7 +7,7 @@ import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
-from app import db, execution, execution_db as xdb, meko_client
+from app import db, execution, execution_db as xdb, meko_client, team_memory
 from app.agents import summarizer
 from app.config import settings
 from app.runtime import auth as agent_auth
@@ -29,11 +29,25 @@ def require_api_token(authorization: str = Header(default="")) -> None:
 @router.post("/v1/agents/{agent_id}/invoke", status_code=202, dependencies=[Depends(require_api_token)])
 async def invoke(agent_id: str, body: InvokeRequest, response: Response):
     """Route the task to the agent's configured runtime (Claude Agent SDK or Codex App Server) and run it
-    in the background. Watch it on /v1/stream or poll /v1/invocations/{id}/events."""
+    in the background. Watch it on /v1/stream or poll /v1/invocations/{id}/events.
+    In the chat and in a project workspace the agent first reads what the team saved to the shared memory
+    (the facts it may read), and its answer is saved there when it finishes."""
+    shared = team_memory.shares_memory(body.run_id)
+    design, reads = None, []
+    if shared:
+        design = await db.get_design()
+    if shared and not body.session_id:          # a follow-up continues a conversation that already has it
+        memory, reads = await team_memory.recall(body.run_id, agent_id, design)
+        if memory:
+            body = body.model_copy(update={"prompt": (body.prompt + memory)[:20_000]})
     try:
         inv, created = await execution.submit(agent_id, body)
     except agent_router.RoutingError as exc:
+        await team_memory.untie_reads(reads)    # the task never started, so it read nothing
         raise HTTPException(exc.status, str(exc)) from exc
+    if shared and created:
+        await team_memory.tie_reads(reads, inv["invocation_id"])
+        team_memory.follow(body.run_id, agent_id, inv["invocation_id"], design)
     if not created:
         response.status_code = 200
     return {"invocation_id": inv["invocation_id"], "run_id": inv["run_id"], "agent_id": agent_id,

@@ -354,7 +354,7 @@ export function MemoryGraph({ showReads = true, showHandoffs = true, showLabels 
   useEffect(() => {
     if (!state.loaded) return
     setNodes(buildNodes(portrait))
-    const raf = requestAnimationFrame(() => fitView({ padding: 0.12 }))
+    const raf = requestAnimationFrame(() => fitView({ padding: 0.18 }))
     return () => cancelAnimationFrame(raf)
     // portrait is handled by the effect below; only a data load rebuilds the node set
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -370,7 +370,7 @@ export function MemoryGraph({ showReads = true, showHandoffs = true, showLabels 
         return { ...n, position: place(n.id, portrait), data: { ...n.data, side: edge > 0.85 ? "left" : "right" } }
       }),
     )
-    const raf = requestAnimationFrame(() => fitView({ padding: 0.1 }))
+    const raf = requestAnimationFrame(() => fitView({ padding: 0.16 }))
     return () => cancelAnimationFrame(raf)
   }, [portrait, measured, setNodes, fitView])
 
@@ -464,7 +464,7 @@ export function MemoryGraph({ showReads = true, showHandoffs = true, showLabels 
       const { width, height } = entry.contentRect
       if (!width || !height) return
       setPortrait(height > width * 1.15)
-      fitView({ padding: 0.1 })
+      fitView({ padding: 0.16 })
     })
     ro.observe(wrap.current)
     return () => ro.disconnect()

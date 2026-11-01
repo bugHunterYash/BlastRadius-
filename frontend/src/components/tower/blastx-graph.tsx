@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
 import { api, type ArchNode, type Architecture, type Impact, type Project } from "@/lib/api"
+import { useTower } from "./tower-store"
 
 const KIND_ICON: Record<string, string> = {
   frontend: "web", api: "api", cache: "bolt", database: "database", worker: "settings_suggest", queue: "queue", proxy: "router",
@@ -41,8 +42,9 @@ function ServiceCard({ data }: NodeProps<ServiceNode>) {
         state === "ok" && "border-primary/50",
       )}
     >
-      <Handle type="target" position={Position.Bottom} className="!size-1.5 !border-0 !bg-muted-foreground/40" />
-      <Handle type="source" position={Position.Top} className="!size-1.5 !border-0 !bg-muted-foreground/40" />
+      {/* a service sits above what it depends on, so its arrows leave from the bottom and arrive on top */}
+      <Handle type="target" position={Position.Top} className="!size-1.5 !border-0 !bg-muted-foreground/40" />
+      <Handle type="source" position={Position.Bottom} className="!size-1.5 !border-0 !bg-muted-foreground/40" />
       <div className="flex items-center gap-2">
         <span className={cn("grid size-7 place-items-center rounded-lg bg-muted", state === "down" && "bg-flag text-white", state === "affected" && "bg-[var(--agent-reviewer)] text-white")}>
           <Icon name={KIND_ICON[n.kind] ?? "deployed_code"} size={17} />
@@ -115,10 +117,32 @@ export function BlastXView() {
   )
 }
 
+const samePath = (a: string, b: string) => a.replace(/[\\/]+$/, "").replace(/\\/g, "/").toLowerCase() === b.replace(/[\\/]+$/, "").replace(/\\/g, "/").toLowerCase()
+
+/** The project the person is looking at: the open workspace folder, else the run's project. "" = none. */
+function useOpenProject(projects: Project[]): string {
+  const { state } = useTower()
+  const [fromBrief, setFromBrief] = useState<{ runId: string; workspaceId: string }>({ runId: "", workspaceId: "" })
+  const runId = state.runId
+  useEffect(() => {
+    if (!runId.startsWith("proj-")) return
+    let live = true
+    api.brief(runId).then((b) => live && setFromBrief({ runId, workspaceId: b.workspace_id ?? "" }), () => {})
+    return () => void (live = false)
+  }, [runId])
+  if (state.workspace) return projects.find((p) => samePath(p.path, state.workspace!))?.workspace_id ?? ""
+  // a workspace's "Assign work" tasks go to the run project-<workspace id>
+  if (runId.startsWith("project-") && projects.some((p) => p.workspace_id === runId.slice(8))) return runId.slice(8)
+  return fromBrief.runId === runId ? fromBrief.workspaceId : ""
+}
+
 function BlastX() {
   const { fitView } = useReactFlow()
   const [projects, setProjects] = useState<Project[]>([])
-  const [source, setSource] = useState<string>("")       // "" = demo stack, else a project workspace id
+  const open = useOpenProject(projects)
+  // follows the open project until the person picks a stack themselves
+  const [picked, setPicked] = useState<{ for: string; source: string } | null>(null)
+  const source = picked && picked.for === open ? picked.source : open   // "" = demo stack, else a project workspace id
   const [arch, setArch] = useState<Architecture | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
@@ -131,7 +155,10 @@ function BlastX() {
     setFailed(null)
     setImpact(null)
     setError(null)
-    api.architecture(source || null).then(setArch, (e: Error) => setError(e.message))
+    api.architecture(source || null).then(setArch, (e: Error) =>
+      setError(source && /no compose file/.test(e.message)
+        ? "This project has no compose.yaml or docker-compose.yml, so there is no architecture to map. Pick Demo stack to try BlastX."
+        : e.message))
   }, [source])
 
   const fail = useCallback(async (service: string | null) => {
@@ -197,7 +224,7 @@ function BlastX() {
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2 text-[13px]">
         <label className="flex items-center gap-1.5 font-semibold text-ink-2">
           Stack
-          <select value={source} onChange={(e) => setSource(e.target.value)} className="h-7 max-w-[180px] rounded-md border bg-background px-1.5 text-[13px]">
+          <select value={source} onChange={(e) => setPicked({ for: open, source: e.target.value })} className="h-7 max-w-[180px] rounded-md border bg-background px-1.5 text-[13px]">
             <option value="">Demo stack</option>
             {projects.map((p) => <option key={p.workspace_id} value={p.workspace_id}>{p.name}</option>)}
           </select>
@@ -217,6 +244,11 @@ function BlastX() {
         )}
         <span className="ml-auto truncate text-muted-foreground">{arch ? `${arch.source} · ${total} services` : ""}</span>
       </div>
+      {!failed && arch && (
+        <p className="shrink-0 border-b bg-muted/40 px-4 py-1.5 text-[12.5px] font-semibold text-ink-2">
+          Click a service to see what breaks when it goes down
+        </p>
+      )}
 
       <div className="relative min-h-0 flex-1 bg-paper">
         {error ? (
@@ -240,11 +272,6 @@ function BlastX() {
             <Background id="minor" variant={BackgroundVariant.Lines} gap={24} lineWidth={0.6} color="var(--grid-minor)" />
             <Background id="major" variant={BackgroundVariant.Lines} gap={120} lineWidth={1} color="var(--grid-major)" />
           </ReactFlow>
-        )}
-        {!failed && arch && (
-          <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full border bg-card/95 px-3 py-1.5 text-[12.5px] font-semibold text-ink-2 shadow-sm">
-            Click a service to see what breaks when it goes down
-          </div>
         )}
         {busy && <div className="absolute top-3 right-3 rounded-full bg-card px-2.5 py-1 text-[12px] shadow">Working out the blast radius…</div>}
       </div>

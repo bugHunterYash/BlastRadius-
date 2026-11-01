@@ -1,7 +1,9 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
-from app import live_sync, projects, session_import
+from app import folders, live_sync, projects, session_import
 from app.routers.agents import require_api_token
 
 router = APIRouter(tags=["claude code sessions"])
@@ -47,10 +49,50 @@ async def live_sessions(limit: int = Query(30, ge=1, le=200)):
     return await live_sync.live_sessions(limit)
 
 
+@router.post("/v1/live/sessions/{invocation_id}/hide", dependencies=[Depends(require_api_token)])
+async def hide_session(invocation_id: uuid.UUID):
+    """Hide a synced chat (e.g. one from an earlier account): it's removed here and never synced again.
+    The chat itself stays in its app."""
+    out = await live_sync.hide(invocation_id)
+    if out is None:
+        raise HTTPException(404, "no synced chat with this id")
+    return out
+
+
 @router.post("/v1/live/sync", dependencies=[Depends(require_api_token)])
 async def sync_now():
     """Run one sync pass now instead of waiting for the next tick."""
     return {"changes": await live_sync.sync_once()}
+
+
+class FolderBody(BaseModel):
+    path: str = Field(min_length=1, max_length=1000)
+    by: str | None = Field(default=None, max_length=200)     # who allowed it (the signed-in account)
+
+
+@router.get("/v1/folders", dependencies=[Depends(require_api_token)])
+async def list_folders():
+    """Folders the tower may show chats from, and folders the apps work in that aren't allowed yet."""
+    return await folders.listing()
+
+
+@router.post("/v1/folders/allow", status_code=201, dependencies=[Depends(require_api_token)])
+async def allow_folder(body: FolderBody):
+    """Allow a folder: chats from the Claude, Codex and Antigravity apps that work in it start syncing."""
+    try:
+        out = await folders.allow(body.path, body.by)
+    except folders.FolderError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    await live_sync.sync_once()
+    return out
+
+
+@router.post("/v1/folders/remove", dependencies=[Depends(require_api_token)])
+async def remove_folder(body: FolderBody):
+    """Stop showing a folder: its synced chats are removed from the tower (they stay in their apps)."""
+    if not await folders.revoke(body.path):
+        raise HTTPException(404, "this folder isn't allowed")
+    return {"removed": await live_sync.forget_unallowed()}
 
 
 class ProjectBody(BaseModel):

@@ -29,15 +29,24 @@ This repo is **in active development** for the hackathon. Honest snapshot:
 |---|---|
 | `core/` engine: parser, dependency graph, gap analysis, preflight, k6 script generation, metrics, analysis, report, fix prompt, before/after compare | Built, with ~325 unit checks (results to be recorded) |
 | `backend/` FastAPI REST + SSE | Built |
-| Known critical bugs (fake-data fallback, fault not wired, fault-run crash, restore not guaranteed) | Being fixed (Phase 0) |
-| PostgreSQL store, Gemini agent, `br` CLI, React dashboard, demo app, Docker setup | Not started |
+| Fault path fixes (fault not wired, fault-run crash, restore) | Fixed on engine branch `feat/yash-YA-08`, not pushed or merged here yet |
+| Live experiments save 0 metric buckets, so the real-load (Pro) report can't be built | Open |
+| **Agent Control Tower** (`tower/` backend, `frontend/` UI): Claude, Codex and Antigravity runtimes, live sync, Meko memory, detectors, session report, BlastX tab | Built and run with real agents; backend tests 103 passed, 1 skipped |
+| Agents writing their findings to Meko | Done for New project runs (each agent reads the last one's findings) |
+| Cloud deploy (`deploy/`: Docker Compose, Caddy, setup script) | Written, not tried on a server yet |
+| Landing page and waitlist (`landing/`) | Built |
+| Dashboard at `/dashboard` with Google sign-in (allow-listed emails), only real data shown | Built; turns on with a Google OAuth client id and secret |
+| Gemini agent, `br` CLI | Not started |
 
-Details: [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md).
+Details: [docs/HANDOFF.md](docs/HANDOFF.md) (current) and [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md) (older engine audit).
 
 ## Documentation
 
 | Doc | What it is |
 |---|---|
+| [docs/HANDOFF.md](docs/HANDOFF.md) | **Start here when taking over.** Agent Control Tower + BlastX: decisions, architecture, how to run, what's left |
+| [docs/CONTROL_TOWER_SCRIPT.md](docs/CONTROL_TOWER_SCRIPT.md) | Whole-product pitch and explainer in Hinglish: problem, solution, Meko, YugabyteDB, tech stack, demo |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | Putting the tower and BlastX on one cloud server (Vultr / DigitalOcean), with HTTPS and a login |
 | [docs/PRD.md](docs/PRD.md) | **Source of truth.** Problem, features, agent spec, API contract, data model, team split, timeline, tests, demo script |
 | [docs/TASKS.md](docs/TASKS.md) | **Per-member task checklist** with hours, done-checks, and handoffs |
 | [docs/PRODUCT.md](docs/PRODUCT.md) | Product: use cases, `npm install -g blastx` install flow, commands, business model and pricing |
@@ -54,10 +63,14 @@ Details: [docs/PROGRESS_REPORT.md](docs/PROGRESS_REPORT.md).
 core/        shared engine (parser, graph, safety, controller, load, metrics, analysis, report, store)
 backend/     FastAPI app (REST + SSE), imports core/
 tests/       unit tests
-docs/        PRD, phase plan, progress report, design notes
+tower/       Agent Control Tower: FastAPI backend, agent runtimes, live sync, Meko client, SDK, demo agents
+frontend/    Control Tower UI (Next.js 15, React 19, Tailwind, shadcn, React Flow)
+landing/     landing page and waitlist (Vite)
+deploy/      one-server cloud deploy (Docker Compose, Caddy, setup.sh)
+docs/        handoff, PRD, pitch, deploy guide, design notes
 ```
 
-Planned: `cli/` (`br`), `frontend/` (React dashboard), `demo-app/` (system under test), `docker-compose.yml`, `Makefile`. See PRD §8.
+The engine's demo app and its `docker-compose.yml` live on the engine branch (`feat/yash-YA-08`). Planned: `cli/` (`br`). How to run the tower: [docs/HANDOFF.md](docs/HANDOFF.md) §5.
 
 ## Running the tests (current state)
 

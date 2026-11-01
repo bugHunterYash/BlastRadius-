@@ -144,12 +144,16 @@ def _agy_index(root, status="CASCADE_RUN_STATUS_RUNNING_GENERATOR"):
     root.mkdir(parents=True, exist_ok=True)
     c = sqlite3.connect(root / "conversation_summaries.db")
     c.execute("CREATE TABLE conversation_summaries (conversation_id text, title text, preview text, step_count integer, "
-              "last_modified_time datetime, workspace_uris text, status text, nesting_depth integer)")
+              "last_modified_time datetime, workspace_uris text, status text, nesting_depth integer, project_id text)")
     c.execute("CREATE TABLE conversations_fts_content (id INTEGER PRIMARY KEY, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, "
               "c10, c11, c12, c13, c14)")
-    c.execute("INSERT INTO conversation_summaries VALUES (?, ?, '', 4, ?, ?, ?, 0)",
+    c.execute("INSERT INTO conversation_summaries VALUES (?, ?, '', 4, ?, ?, ?, 0, 'project-1')",
               ("agy-1", "Plan the release", "2026-11-01 04:10:00.5+00:00",
                json.dumps(["file:///c%3A/Users/me/Documents/shop%20app"]), status))
+    # a chat from an earlier Antigravity account on this machine: it belongs to no project
+    c.execute("INSERT INTO conversation_summaries VALUES ('agy-old', 'Old account chat', '', 2, ?, ?, "
+              "'CASCADE_RUN_STATUS_IDLE', 0, '')",
+              ("2026-10-01 09:00:00+00:00", json.dumps(["file:///c%3A/Users/me/Documents/old%20project"])))
     user, agent = "Plan the release\nAlso check पृष्ठ", "Here is the plan.\nDone: release notes drafted."
     first_agent = len("Here is the plan.\n".encode())
     second_user = len("Plan the release\n".encode())
@@ -185,6 +189,80 @@ def test_antigravity_chats_are_synced(client, monkeypatch, tmp_path):
     assert inv["status"] == "completed" and inv["metadata"]["cwd"].endswith("shop app")
     again = c.post("/v1/live/sync", headers=AUTH).json()["changes"]
     assert not [x for x in again if x["provider"] == "antigravity"]               # nothing new, nothing written
+
+
+def test_only_the_signed_in_accounts_antigravity_chats_are_synced(client, monkeypatch, tmp_path):
+    from app import live_sync
+    from app.config import settings
+    c, *_ = client
+    _agy_index(tmp_path / "agy", status="CASCADE_RUN_STATUS_IDLE")
+    monkeypatch.setattr(settings, "ANTIGRAVITY_DIR", str(tmp_path / "agy"))
+
+    # an older tower synced every chat in the index, the other account's too
+    monkeypatch.setattr(settings, "ANTIGRAVITY_PROJECT_CHATS_ONLY", False)
+    c.post("/v1/live/sync", headers=AUTH)
+    titles = lambda: sorted(s["title"] for s in c.get("/v1/live/sessions", headers=AUTH).json() if s["app"] == "antigravity")  # noqa: E731
+    assert titles() == ["Old account chat", "Plan the release"]
+
+    monkeypatch.setattr(settings, "ANTIGRAVITY_PROJECT_CHATS_ONLY", True)
+    assert c.portal.call(live_sync.forget_other_account_chats) == 1
+    assert titles() == ["Plan the release"]
+    assert not [r for r in c.get("/v1/runs?limit=200", headers=AUTH).json() if r["run_id"] == "antigravity-agy-old"]
+    c.post("/v1/live/sync", headers=AUTH)
+    assert titles() == ["Plan the release"]                                   # and it doesn't come back
+
+
+def test_a_hidden_chat_is_removed_and_never_synced_again(client, monkeypatch, tmp_path):
+    from app.config import settings
+    c, *_ = client
+    _agy_index(tmp_path / "agy", status="CASCADE_RUN_STATUS_IDLE")
+    monkeypatch.setattr(settings, "ANTIGRAVITY_DIR", str(tmp_path / "agy"))
+    c.post("/v1/live/sync", headers=AUTH)
+    chat = next(s for s in c.get("/v1/live/sessions", headers=AUTH).json() if s["title"] == "Plan the release")
+
+    assert c.post(f"/v1/live/sessions/{chat['invocation_id']}/hide", headers=NO_TOKEN).status_code == 401
+    r = c.post(f"/v1/live/sessions/{chat['invocation_id']}/hide", headers=AUTH)
+    assert r.status_code == 200 and r.json()["title"] == "Plan the release"
+    assert c.get(f"/v1/invocations/{chat['invocation_id']}", headers=AUTH).status_code == 404
+    c.post("/v1/live/sync", headers=AUTH)
+    assert not [s for s in c.get("/v1/live/sessions", headers=AUTH).json() if s["title"] == "Plan the release"]
+    assert c.post(f"/v1/live/sessions/{chat['invocation_id']}/hide", headers=AUTH).status_code == 404
+
+
+def test_only_chats_in_allowed_folders_are_synced(client, monkeypatch, tmp_path):
+    import json
+    import sqlite3
+    from app.config import settings
+    c, *_ = client
+    project = tmp_path / "shop app"
+    project.mkdir()
+    _agy_index(tmp_path / "agy", status="CASCADE_RUN_STATUS_IDLE")
+    db = sqlite3.connect(tmp_path / "agy" / "conversation_summaries.db")
+    db.execute("UPDATE conversation_summaries SET workspace_uris = ? WHERE conversation_id = 'agy-1'", (json.dumps([project.as_uri()]),))
+    db.commit()
+    db.close()
+    monkeypatch.setattr(settings, "ANTIGRAVITY_DIR", str(tmp_path / "agy"))
+    monkeypatch.setattr(settings, "LIVE_SYNC_ALLOWED_FOLDERS_ONLY", True)
+    titles = lambda: [s["title"] for s in c.get("/v1/live/sessions", headers=AUTH).json()]  # noqa: E731
+
+    # a new install allows no folder: nothing is synced, the folder is only offered (by path)
+    c.post("/v1/live/sync", headers=AUTH)
+    assert titles() == []
+    listing = c.get("/v1/folders", headers=AUTH).json()
+    assert listing["allowed"] == [] and str(project.resolve()) in [f["path"] for f in listing["suggested"]]
+    assert c.get("/v1/folders", headers=NO_TOKEN).status_code == 401
+
+    assert c.post("/v1/folders/allow", headers=AUTH, json={"path": str(tmp_path / "nope")}).status_code == 422
+    r = c.post("/v1/folders/allow", headers=AUTH, json={"path": str(project), "by": "me@example.com"})
+    assert r.status_code == 201 and r.json()["name"] == "shop app"
+    assert titles() == ["Plan the release"]                    # synced right away
+    assert str(project.resolve()) not in [f["path"] for f in c.get("/v1/folders", headers=AUTH).json()["suggested"]]
+
+    # removing the folder removes its chats from the tower, and they don't come back
+    assert c.post("/v1/folders/remove", headers=AUTH, json={"path": str(project)}).json()["removed"] == 1
+    c.post("/v1/live/sync", headers=AUTH)
+    assert titles() == []
+    assert c.post("/v1/folders/remove", headers=AUTH, json={"path": str(project)}).status_code == 404
 
 
 def test_project_folder_can_be_added_only_where_a_synced_session_works(client, monkeypatch, tmp_path):

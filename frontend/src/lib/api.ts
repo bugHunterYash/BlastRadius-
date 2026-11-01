@@ -110,6 +110,22 @@ export interface NewProjectBody {
   folder?: string | null
   tasks: { agent: string; task: string; label?: string }[]
   allow_edits: boolean
+  /** each part waits for the one before and reads its findings from the shared memory */
+  in_order?: boolean
+}
+
+export interface AllowedFolder {
+  path: string
+  name: string
+  allowed_by: string | null
+  allowed_at: string
+}
+
+export interface FolderListing {
+  /** false when the server syncs every folder (LIVE_SYNC_ALLOWED_FOLDERS_ONLY=false) */
+  enforced: boolean
+  allowed: AllowedFolder[]
+  suggested: { path: string; apps: string[]; last_seen: string }[]
 }
 
 export interface Project {
@@ -171,7 +187,7 @@ export interface ExecEvent {
 }
 
 export const api = {
-  runs: () => req<ApiRun[]>("/v1/runs?limit=30"),
+  runs: () => req<ApiRun[]>("/v1/runs?limit=100"),
   events: (runId: string) => req<ApiEvent[]>(`/v1/runs/${encodeURIComponent(runId)}/events`),
   issues: (runId: string) => req<ApiIssue[]>(`/v1/issues?run_id=${encodeURIComponent(runId)}`),
   design: () => req<DesignSpec>("/v1/design"),
@@ -196,8 +212,9 @@ export const api = {
     }),
   projects: () => req<Project[]>("/v1/projects"),
   report: (runId: string) => req<ReportData>(`/v1/runs/${encodeURIComponent(runId)}/report`),
+  brief: (runId: string) => req<Brief>(`/v1/runs/${encodeURIComponent(runId)}/brief`),
   newProject: (body: NewProjectBody) =>
-    req<Brief & { invocations: { agent: string; invocation_id: string; phase: string }[] }>("/v1/project-runs", { method: "POST", body: JSON.stringify(body) }),
+    req<Brief & { invocations: { agent: string; invocation_id: string; phase: string }[]; queued: { agent: string; phase: string }[] }>("/v1/project-runs", { method: "POST", body: JSON.stringify(body) }),
   architecture: (workspaceId?: string | null, file?: string | null) =>
     req<Architecture>(`/v1/blastx/architecture${workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}${file ? `&file=${encodeURIComponent(file)}` : ""}` : ""}`),
   impact: (graphId: string, service: string) => req<Impact>(`/v1/blastx/impact/${graphId}/${encodeURIComponent(service)}`),
@@ -205,6 +222,12 @@ export const api = {
   invocation: (id: string) => req<Invocation>(`/v1/invocations/${id}`),
   /** Chats synced live from the Claude app / Claude Code and the Codex app. */
   liveSessions: (limit = 12) => req<LiveSession[]>(`/v1/live/sessions?limit=${limit}`),
+  /** Folders the tower may show chats from, and the ones the apps work in that aren't allowed yet. */
+  folders: () => req<FolderListing>("/v1/folders"),
+  allowFolder: (path: string, by?: string | null) => req<AllowedFolder>("/v1/folders/allow", { method: "POST", body: JSON.stringify({ path, by: by ?? null }) }),
+  removeFolder: (path: string) => req<{ removed: number }>("/v1/folders/remove", { method: "POST", body: JSON.stringify({ path }) }),
+  /** Remove a synced chat from the tower for good (it stays in its own app). */
+  hideSession: (invocationId: string) => req<{ hidden: boolean; title: string | null }>(`/v1/live/sessions/${invocationId}/hide`, { method: "POST" }),
   stepsAfter: (invocationId: string, after: number) =>
     req<ApiExecEvent[]>(`/v1/invocations/${invocationId}/events?types=${STEP_TYPES}&after_sequence=${after}&limit=2000`),
   cancel: (id: string) => req(`/v1/invocations/${id}/cancel`, { method: "POST" }),
@@ -216,11 +239,18 @@ export const chatRun = () => `chat-${new Date().toISOString().slice(0, 10)}`
 /** Chats synced from the Claude, Codex and Antigravity apps: shown under Live sessions, never as runs. */
 export const isSyncedRun = (runId: string) => /^(claude-session-|codex-thread-|antigravity-)/.test(runId)
 
-/** The newest run (or the one asked for), with everything the views need. */
+/** Runs made by scripts instead of real agents: scripted demo team (demo-), detector scenarios (scn-) and
+ *  recorded transcripts (replay-). They stay in the database for tests, but the UI shows only real work. */
+export const isScriptedRun = (runId: string) => /^(demo-|scn-|replay-)/.test(runId)
+
+/** The run asked for, else the real run that shows the most, with everything the views need. */
 export async function loadSnapshot(runId?: string): Promise<Snapshot | null> {
-  const all = await api.runs()
-  // the graph is about shared memory: skip runs without memory events (chat questions, imported sessions)
-  const runs = all.filter((r) => r.events > 0 && !r.run_id.startsWith("chat-") && !isSyncedRun(r.run_id))
+  const all = (await api.runs()).filter((r) => !isScriptedRun(r.run_id))
+  // the graph is about shared memory: skip runs without memory events (chat questions, imported sessions).
+  // Open first on the run with the most problems caught, then the most steps; the newest wins a tie.
+  const runs = all
+    .filter((r) => r.events > 0 && !r.run_id.startsWith("chat-") && !isSyncedRun(r.run_id))
+    .sort((a, b) => b.open_issues - a.open_issues || b.issues - a.issues || b.events - a.events)
   const id = runId && all.some((r) => r.run_id === runId) ? runId : (runs[0] ?? all[0])?.run_id
   if (!id) return null
   const [events, issues, design, timeline, agents, inv, chat] = await Promise.all([

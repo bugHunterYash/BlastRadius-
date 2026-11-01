@@ -9,6 +9,7 @@
 // changes (POST/PUT) sent as JSON from this same origin (so another website can't trigger them).
 
 import type { NextRequest } from "next/server"
+import { auth, authEnabled, authRequired } from "@/auth"
 
 export const dynamic = "force-dynamic"
 
@@ -43,6 +44,8 @@ function refused(req: NextRequest): string | null {
 async function forward(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const why = refused(req)
   if (why) return Response.json({ detail: why }, { status: 403 })
+  // with Google sign-in set up, only a signed-in, allowed account gets through (the middleware checks too)
+  if (authRequired && !(authEnabled && (await auth())?.user)) return Response.json({ detail: "sign in first" }, { status: 401 })
   const { path } = await params
   // Only the versioned API is reachable through here.
   if (path[0] !== "v1" || path.some((p) => p === ".." || p.includes("\\"))) {

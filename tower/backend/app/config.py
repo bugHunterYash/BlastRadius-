@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     ANTIGRAVITY_BIN: str = ""            # empty = `agy` on PATH, else ~/.gemini/bin/agy
     ANTIGRAVITY_MODEL: str = "gemini-3.8-flash-medium"
     ANTIGRAVITY_DIR: str = ""            # where Antigravity keeps chats; empty = ~/.gemini/antigravity
+    # Antigravity keeps every account's chats in one local index; only the signed-in account's chats belong to
+    # one of its projects, so older accounts' chats (no project) aren't synced
+    ANTIGRAVITY_PROJECT_CHATS_ONLY: bool = True
     CODEX_BIN: str = "codex"
     CODEX_MODEL: str = ""                 # empty = Codex's configured default
     CODEX_SANDBOX: str = "workspace-write"
@@ -70,6 +73,8 @@ class Settings(BaseSettings):
     LIVE_SYNC_INTERVAL_S: float = 5.0
     LIVE_SYNC_LIMIT: int = 20             # newest sessions/threads per app per pass
     LIVE_SYNC_CLAUDE_DIR: str = ""        # only sessions under this project dir; empty = all projects
+    # only chats working in a folder the person allowed (app.folders); a new install allows none
+    LIVE_SYNC_ALLOWED_FOLDERS_ONLY: bool = True
 
     AGENT_WORKSPACE_ROOT: Path = TOWER_ROOT / "workspaces"
     AGENT_WORKSPACES: str = ""            # optional comma list; empty = any directory under the root

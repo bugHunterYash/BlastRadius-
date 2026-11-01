@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { agentColor, cap, clock } from "@/lib/format"
 import { api, type LiveSession, type Project } from "@/lib/api"
-import { DESIGN, PROVIDERS, toExecCalls, type ApiExecEvent, type ApiInvocation } from "@/lib/data"
+import { askedText, DESIGN, PROVIDERS, toExecCalls, type ApiExecEvent, type ApiInvocation } from "@/lib/data"
 import type { MekoCall } from "@/lib/types"
 import { useAgentAuth } from "./agent-access"
 import { LiveDot, LiveSessionView, sessionTitle, useLiveSessions, usePoll } from "./live-sessions"
@@ -114,7 +114,7 @@ function Workspace({ folder, onClose }: { folder: string; onClose: () => void })
     }
     for (const t of team) {
       items.push({ key: `t-${t.invocation_id}`, ts: t.created_at, provider: t.provider, who: cap(t.agent_id), agent: t.agent_id,
-                   call: { call_id: `t-${t.invocation_id}`, ts: t.created_at, actor: "you", kind: "task", datapack: "", to: t.agent_id, text: t.user_prompt ?? "" } })
+                   call: { call_id: `t-${t.invocation_id}`, ts: t.created_at, actor: "you", kind: "task", datapack: "", to: t.agent_id, text: askedText(t.user_prompt) } })
       if (t.final_response || t.error_message)
         items.push({ key: `a-${t.invocation_id}`, ts: t.completed_at ?? t.created_at, provider: t.provider, who: cap(t.agent_id), agent: t.agent_id,
                      call: { call_id: `a-${t.invocation_id}`, ts: t.completed_at ?? t.created_at, actor: t.agent_id,
@@ -178,7 +178,7 @@ function Workspace({ folder, onClose }: { folder: string; onClose: () => void })
                           <b className="text-[15px]" style={{ color: agentColor(a) }}>{cap(a)}</b>
                           <span className="truncate text-[12.5px] text-muted-foreground">{runtimeLine(a) || RUNTIME_LABEL[PROVIDERS[a]]}</span>
                         </div>
-                        <p className="truncate text-[13.5px] text-ink-2">{cur ? cur.user_prompt : "No task here yet"}</p>
+                        <p className="truncate text-[13.5px] text-ink-2">{cur ? askedText(cur.user_prompt) : "No task here yet"}</p>
                       </div>
                       {cur && <TaskStatus status={cur.status} />}
                     </li>

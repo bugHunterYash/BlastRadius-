@@ -44,6 +44,7 @@ export function NewProject() {
   const [folder, setFolder] = useState("")
   const [parts, setParts] = useState<Part[]>(() => partsFor("software", agents))
   const [edits, setEdits] = useState(false)
+  const [inOrder, setInOrder] = useState(true)
   const [busy, setBusy] = useState(false)
 
   // agents arrive with the live design, after the first render
@@ -68,10 +69,15 @@ export function NewProject() {
     setBusy(true)
     try {
       const p = await api.newProject({
-        name: name.trim(), kind, goal: goal.trim(), folder: folder || null, allow_edits: edits,
+        name: name.trim(), kind, goal: goal.trim(), folder: folder || null, allow_edits: edits, in_order: inOrder,
         tasks: ready.map((r) => ({ agent: r.agent, task: r.task.trim(), label: r.label.trim() || undefined })),
       })
-      toast.success(`${p.name} started`, { description: `${p.invocations.length} ${p.invocations.length === 1 ? "agent is" : "agents are"} on it${folder ? ` in ${folderName(folder)}` : ""}.` })
+      const where = folder ? ` in ${folderName(folder)}` : ""
+      toast.success(`${p.name} started`, {
+        description: p.queued.length
+          ? `${cap(p.invocations[0].agent)} goes first${where}; the next ${p.queued.length === 1 ? "agent reads" : `${p.queued.length} agents read`} its findings from the shared memory.`
+          : `${p.invocations.length} ${p.invocations.length === 1 ? "agent is" : "agents are"} on it${where}.`,
+      })
       setNewProjectOpen(false)
       setName("")
       setGoal("")
@@ -89,7 +95,7 @@ export function NewProject() {
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle>New project</DialogTitle>
-          <DialogDescription>Say what it’s for and give each agent its part. They start right away, and the run opens here.</DialogDescription>
+          <DialogDescription>Say what it’s for and give each agent its part. The run opens here, and every agent’s findings go to the shared memory.</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
@@ -183,6 +189,11 @@ export function NewProject() {
             <Switch checked={edits} onCheckedChange={setEdits} />
             Allow edits
             <span className="text-muted-foreground">{edits ? "agents with write access may change files" : "read-only: agents look, they don’t change files"}</span>
+          </label>
+          <label className="flex items-center gap-2.5 text-[13.5px]">
+            <Switch checked={inOrder} onCheckedChange={setInOrder} />
+            One after another
+            <span className="text-muted-foreground">{inOrder ? "each agent reads the last one’s findings from Meko" : "all start at once, without each other’s findings"}</span>
           </label>
 
           <div className="flex items-center justify-end gap-2">
