@@ -153,6 +153,11 @@ Not tried on a real server yet.
 
 ## 6. What's built and verified with real runs
 
+- **Meko on / off switch** (top bar; `PUT /v1/memory/mode`, kept in `app_state`): off means agents in new
+  tasks work alone, neither reading nor writing shared memory; notes stay local. Each project run records its
+  mode (`runs.memory_mode`, migration 009) and shows a badge; an "off" run's headline says the agents worked
+  alone. Verified live on 1 Nov: off, the Writer said "no facts reached me"; on, it read `facts v24` from Meko.
+  For the demo video see [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md).
 - **Folders must be allowed:** live sync imports a chat only when its folder is on the allowed list
   (`app/folders.py`, migration 008, `LIVE_SYNC_ALLOWED_FOLDERS_ONLY`, on by default). A new install allows none,
   so nothing personal shows until someone signs in and picks folders (sidebar "Folders", or the "Allow a folder"

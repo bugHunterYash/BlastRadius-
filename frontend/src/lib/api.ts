@@ -114,6 +114,13 @@ export interface NewProjectBody {
   in_order?: boolean
 }
 
+export interface MemoryModeState {
+  sharing: boolean
+  /** where shared memory goes now */
+  mode: "meko" | "local" | "off"
+  meko_configured: boolean
+}
+
 export interface AllowedFolder {
   path: string
   name: string
@@ -222,6 +229,9 @@ export const api = {
   invocation: (id: string) => req<Invocation>(`/v1/invocations/${id}`),
   /** Chats synced live from the Claude app / Claude Code and the Codex app. */
   liveSessions: (limit = 12) => req<LiveSession[]>(`/v1/live/sessions?limit=${limit}`),
+  /** The Meko switch: whether agents share memory, and where it goes. */
+  memoryMode: () => req<MemoryModeState>("/v1/memory/mode"),
+  setMemoryMode: (sharing: boolean) => req<MemoryModeState>("/v1/memory/mode", { method: "PUT", body: JSON.stringify({ sharing }) }),
   /** Folders the tower may show chats from, and the ones the apps work in that aren't allowed yet. */
   folders: () => req<FolderListing>("/v1/folders"),
   allowFolder: (path: string, by?: string | null) => req<AllowedFolder>("/v1/folders/allow", { method: "POST", body: JSON.stringify({ path, by: by ?? null }) }),

@@ -100,6 +100,7 @@ async def providers_health():
             meko = {"mode": "meko", "available": True, "tools": tools, **await asyncio.wait_for(meko_client.meko_info(), 15)}
         except Exception as exc:
             meko = {"mode": "meko", "available": False, "detail": repr(exc)}
+        meko["sharing"] = meko_client.sharing()
     else:
         meko = {"mode": "local", "available": False,
                 "detail": "MEKO_MCP_URL not set; the local notebook table stands in for the Datapack"}

@@ -60,6 +60,32 @@ def test_in_order_parts_share_memory_and_the_run_is_analysed(client):  # noqa: F
     assert not client.get(f"/v1/issues?run_id={p['run_id']}").json()        # a clean hand-off: nothing to flag
 
 
+def test_with_meko_off_each_agent_works_alone(client):  # noqa: F811
+    import time
+    assert client.get("/v1/memory/mode").json()["sharing"] is True
+    r = client.put("/v1/memory/mode", json={"sharing": False}).json()
+    assert r == {"sharing": False, "mode": "off", "meko_configured": False}
+    assert client.get("/v1/health").json()["notebook"] == "off"
+    try:
+        p = new_project(client, in_order=True).json()
+        end = time.monotonic() + 30
+        while client.get(f"/v1/runs/{p['run_id']}").json()["status"] != "done":
+            assert time.monotonic() < end, "the run was never analysed"
+            time.sleep(0.2)
+        events = client.get(f"/v1/runs/{p['run_id']}/events").json()
+        # no reads, writes or handoffs: only the run's start (which says how it ran) and its end
+        assert [(e["op"], e["reason"]) for e in events] == [("run_start", "Meko off: each agent works alone"), ("run_end", None)]
+        run = next(x for x in client.get("/v1/runs").json() if x["run_id"] == p["run_id"])
+        assert run["memory_mode"] == "off"
+        headline = client.get(f"/v1/timeline?run_id={p['run_id']}").json()["digests"][0]["summary"]["headline"]
+        assert headline == "Meko off: researcher, writer worked alone, so nothing one found reached the next."
+        writer = next(i for i in client.get(f"/v1/runs/{p['run_id']}/invocations").json()["invocations"] if i["agent_id"] == "writer")
+        assert "Shared memory" not in client.get(f"/v1/invocations/{writer['invocation_id']}").json()["user_prompt"]
+    finally:
+        client.put("/v1/memory/mode", json={"sharing": True})
+    assert client.get("/v1/memory/mode").json()["mode"] == "local"       # on again (no Meko URL in tests)
+
+
 def test_chat_questions_share_the_team_memory(client):  # noqa: F811
     import time
     run = "chat-2026-11-01"

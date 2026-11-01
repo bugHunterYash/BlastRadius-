@@ -41,7 +41,7 @@ async def recall(run_id: str, agent: str, design: dict) -> tuple[str, list[str]]
     """Read every fact this agent may read that an earlier agent in this run wrote.
     Returns the block for the agent's prompt and the read events' ids (tied to its task once it exists)."""
     keys = design.get("permissions", {}).get(agent, {}).get("read") or []
-    if not keys:
+    if not keys or not meko_client.sharing():      # Meko switched off: the agent works alone
         return "", []
     rows = await db.pool.fetch(
         """SELECT DISTINCT ON (fact_key) fact_key, version, agent, meko_ref, text FROM team_memory
@@ -82,6 +82,8 @@ async def remember(run_id: str, agent: str, text: str, design: dict, *, invocati
                    next_agent: str | None) -> dict:
     """Write an agent's findings as its fact (Meko + Postgres), then hand off to the next agent."""
     key = output_key(agent, design)
+    if not meko_client.sharing():                  # Meko switched off: nothing is shared, nobody is handed to
+        return {"fact_key": key, "version": None, "meko_ref": None, "shared": False}
     text = text.strip()[:MAX_TEXT]
     ref = None
     try:

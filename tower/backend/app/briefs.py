@@ -9,7 +9,7 @@ import datetime as dt
 import logging
 import re
 
-from app import db, execution, execution_db as xdb, projects, team_memory
+from app import db, execution, execution_db as xdb, meko_client, projects, team_memory
 from app.runtime import router as agent_router
 from app.runtime.models import InvokeRequest
 
@@ -62,7 +62,11 @@ async def start(*, name: str, kind: str, goal: str, deliverable: str | None, fol
             "INSERT INTO project_briefs (run_id, name, kind, goal, deliverable, phases, workspace_id) "
             "VALUES ($1, $2, $3, $4, $5, $6, $7)",
             run_id, name, kind, goal, brief["deliverable"], phases, workspace_id)
-    await team_memory.emit(run_id, "system", "run_start")
+    memory = meko_client.mode()
+    await db.pool.execute("UPDATE runs SET memory_mode = $2 WHERE run_id = $1", run_id, memory)
+    await team_memory.emit(run_id, "system", "run_start", reason={
+        "meko": "Shared memory on: agents read and write Meko", "local": "Shared memory on (local table, no Meko URL)",
+        "off": "Meko off: each agent works alone"}[memory])
 
     async def send(i: int) -> dict:
         phase, t = phases[i], tasks[i]

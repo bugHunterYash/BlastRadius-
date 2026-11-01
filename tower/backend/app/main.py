@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import briefs, db, execution, pipeline, team_memory
+from app import briefs, db, execution, meko_client, pipeline, team_memory
 from app.runtime import auth as agent_auth
 from app.agents import fixer, summarizer
 from app.config import DEV_TOKEN, settings
@@ -27,6 +27,7 @@ async def lifespan(app: FastAPI):
     await db.init()
     await projects.load()
     await folders.load()
+    await meko_client.load_switch()
     task = pipeline.start()
     execution.start()
     if n := await execution.recover_interrupted():
@@ -60,7 +61,7 @@ async def health():
     """What is real and what is a stand-in, so the UI can say so."""
     return {
         "db": await db.health(),
-        "notebook": settings.notebook_mode,
+        "notebook": meko_client.mode(),
         "summarizer": summarizer.label(),
         "fixer": settings.CLAUDE_MODEL if fixer.enabled() else "template",
     }

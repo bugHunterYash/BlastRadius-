@@ -59,6 +59,11 @@ async def analyse(run_id: str):
     rows = sorted(db.as_rows(agent_events) + await xdb.summary_rows(run_id))
     digest, model = await summarizer.summarize_run(rows, [d.detail for d in drafts])
     digest["execution_summary"] = await xdb.execution_summary(run_id)   # counted, never LLM-written
+    if await db.pool.fetchval("SELECT memory_mode FROM runs WHERE run_id = $1", run_id) == "off" and not drafts:
+        # "clean" would mislead: with Meko off nothing could go wrong between agents because nothing was shared
+        agents = await db.pool.fetch("SELECT DISTINCT agent_id FROM agent_invocations WHERE run_id = $1 ORDER BY 1", run_id)
+        names = ", ".join(r["agent_id"] for r in agents) or "the agents"
+        digest["headline"] = f"Meko off: {names} worked alone, so nothing one found reached the next."
     await stream.publish("digest.created", await db.insert_digest(run_id, digest, model))
 
     async def fix_one(issue):

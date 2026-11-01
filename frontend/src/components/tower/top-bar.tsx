@@ -8,6 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SidebarContent } from "./sidebar"
 import { useTower, type Mode } from "./tower-store"
 import { UserMenu } from "./user-menu"
+import { MekoSwitch } from "./meko-switch"
 
 const MODES: { value: Mode; label: string }[] = [
   { value: "graph", label: "Graph" },
@@ -57,6 +58,10 @@ export function TopBar() {
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
+
+      <span className="hidden lg:contents">
+        <MekoSwitch />
+      </span>
 
       <Button variant="outline" className="hidden h-8 gap-2 rounded-lg px-2.5 font-normal text-muted-foreground md:inline-flex" onClick={() => setSearchOpen(true)}>
         <Icon name="search" size={18} />

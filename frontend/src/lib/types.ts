@@ -64,6 +64,8 @@ export interface Run {
   started_at: string
   headline: string
   summary: string
+  /** project runs only: "meko", "local" or "off" (agents worked alone) */
+  memory_mode?: "meko" | "local" | "off" | null
 }
 
 /**

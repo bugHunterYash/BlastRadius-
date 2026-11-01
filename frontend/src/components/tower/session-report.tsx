@@ -15,6 +15,7 @@ import { PROJECT, PROJECT_TEMPLATES, type Project, type ProjectKind } from "@/li
 import { AgentGlyph } from "./agent-glyph"
 import { ActivityChart, FreshnessChart, HealthChart, PhaseTimeChart, Sparkline } from "./report-charts"
 import { RuntimeMark, RUNTIME_LABEL } from "./runtime-logo"
+import { MemoryBadge } from "./meko-switch"
 import { useTower } from "./tower-store"
 
 const pct = (n: number) => `${Math.round(n * 100)}%`
@@ -200,6 +201,7 @@ function Report() {
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-[15px] font-semibold text-ink-2">
             <span className="flex items-center gap-2"><Icon name="schedule" size={20} className="text-muted-foreground" />{when(report.startTs)} to {clock(report.endTs)} · {fmtSpan(report.durationSec)}</span>
             {run && <span className="flex items-center gap-2"><Icon name="database" size={20} className="text-muted-foreground" />{run.datapack}</span>}
+            {run?.memory_mode && <MemoryBadge mode={run.memory_mode} />}
             {data?.brief?.workspace_id && <span className="flex items-center gap-2"><Icon name="folder_open" size={20} className="text-muted-foreground" />{data.brief.workspace_id}</span>}
             <span className="flex items-center gap-1.5">
               {report.agents.map((a) => <AgentGlyph key={a.agent} agent={a.agent} size={26} />)}

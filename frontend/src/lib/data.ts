@@ -71,7 +71,11 @@ export interface ApiRun {
   issues: number
   open_issues: number
   events: number
+  /** how a project run's agents shared memory: through Meko, a local table, or not at all ("off") */
+  memory_mode?: MemoryMode | null
 }
+
+export type MemoryMode = "meko" | "local" | "off"
 
 export interface ApiDigest {
   run_id: string
@@ -297,7 +301,7 @@ function toRun(r: ApiRun, digest?: ApiDigest): Run {
   const summary = `${r.events} memory events${r.issues ? `, ${r.issues} issue${r.issues > 1 ? "s" : ""}` : ", no issues"}.`
   return {
     run_id: r.run_id, datapack: r.datapack, status: r.status === "running" || r.status === "analysing" ? r.status : "done",
-    started_at: r.started_at,
+    started_at: r.started_at, memory_mode: r.memory_mode ?? null,
     headline: d?.headline ?? (r.status === "running" ? "Run in progress" : r.open_issues ? `${r.open_issues} issue${r.open_issues > 1 ? "s" : ""} to review` : "A clean run"),
     summary,
   }

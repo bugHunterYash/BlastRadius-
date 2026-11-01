@@ -12,6 +12,7 @@ import type { CallKind, Issue, MekoCall } from "@/lib/types"
 import { useAgentAuth } from "./agent-access"
 import { AgentAvatar, RuntimeChip, RuntimeMark, RUNTIME_LABEL, runtimeLine } from "./runtime-logo"
 import { seenIssues, useTower } from "./tower-store"
+import { MemoryBadge } from "./meko-switch"
 
 const VERB: Record<CallKind, string> = {
   note: "wrote",
@@ -308,6 +309,7 @@ function RunHeader() {
       <div className="flex items-center gap-2 text-[14.5px] text-muted-foreground">
         <span className={cn("size-1.5 rounded-full", ended ? "bg-mint" : "animate-pulse bg-flag")} />
         {ended ? "Run ended" : "Live"} · {run.run_id} · {run.datapack}
+        <MemoryBadge mode={run.memory_mode} className="ml-1" />
       </div>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={ended ? "digest" : "live"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
